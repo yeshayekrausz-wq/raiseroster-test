@@ -1,0 +1,666 @@
+<!doctype html>
+<!-- RaiseRoster Super Admin - Step 3 (COMPLETE CONTROL CENTER; supersedes Step 2)
+     Full build: Schools list + full School Detail (Overview / Campaigns / Users /
+     Billing / Status History / Support / Inbox / Audit / Notes), Create Account,
+     campaign rename + lifecycle, all 10 account statuses with reason + message +
+     history, support-desk Inbox with threads/replies/statuses, direct Messages,
+     Billing & Plans + Discounts + custom pricing + effective price, Training
+     Videos, platform Audit Log, Platform Settings, global search. Wired to
+     migrations 0002/0003; sections feature-detect and show install banners until
+     they run. Auth-account actions call the sa-user-admin Edge Function and say
+     NOT CONNECTED honestly if it is not deployed. Hash routing throughout.
+     (Step 2 notes: Phase 1 stability release
+     Changes vs Step 1: removed a 185KB injected third-party script that was NOT
+     RaiseRoster code (browser-extension contamination baked in when the page was
+     saved); hash routing so Back/Forward/refresh/deep-links work; super-admin check
+     no longer breaks for users with multiple memberships; hardcoded "Active" status
+     pills replaced with honest placeholders until account status ships (Phase 3);
+     inbox filter now actually filters (by request type). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RaiseRoster — Super Admin</title>
+<style>
+:root{
+  --bg:#f4f7fb;--panel:#fff;--ink:#172033;--muted:#718096;--line:#e5eaf2;
+  --blue:#1769e0;--blue2:#0f4fb3;--green:#16a36a;--red:#df3f4f;--orange:#e68a17;
+  --purple:#7357d8;--shadow:0 10px 30px rgba(30,55,90,.08)
+}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit}.hidden{display:none!important}
+.shell{min-height:100vh;display:grid;grid-template-columns:245px 1fr}
+.sidebar{background:linear-gradient(180deg,#0e397d,#0a2c63);color:#fff;padding:18px 12px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{font-size:24px;font-weight:950;padding:8px 12px 22px}.brand small{display:block;font-size:11px;letter-spacing:1.6px;opacity:.7;margin-top:4px}
+.nav{display:flex;flex-direction:column;gap:5px}.nav button{border:0;background:transparent;color:#dbe8ff;text-align:left;padding:12px 13px;border-radius:10px;cursor:pointer;font-weight:800}
+.nav button:hover,.nav button.active{background:rgba(255,255,255,.15);color:#fff}.nav .badge{float:right;background:#e63e50;color:white;border-radius:99px;padding:2px 7px;font-size:11px}
+.sideBottom{margin-top:auto;border-top:1px solid rgba(255,255,255,.15);padding-top:12px}.userline{padding:10px 12px;font-size:13px;color:#dbe8ff}.signout{width:100%;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;padding:10px;border-radius:10px;cursor:pointer}
+.main{min-width:0}.topbar{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:20px;margin:0}.topActions{display:flex;gap:9px}.content{padding:26px;max-width:1500px;margin:auto}
+.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:850;cursor:pointer;background:#e8eef8;color:#21304a}.btn.primary{background:var(--blue);color:#fff}.btn.green{background:var(--green);color:#fff}.btn.red{background:var(--red);color:#fff}.btn.orange{background:var(--orange);color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:20px}.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}.stat .label{color:var(--muted);font-size:13px;font-weight:800}.stat .num{font-size:29px;font-weight:950;margin-top:8px}.stat .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:18px}.panelHead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.panelHead h2{font-size:17px;margin:0}.panelBody{padding:18px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.search{min-width:260px;flex:1;max-width:440px}.field,input,select,textarea{border:1px solid #d7dfeb;border-radius:9px;padding:10px 11px;background:#fff;color:var(--ink)}input,select,textarea{width:100%}textarea{min-height:110px;resize:vertical}
+.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}tr:hover td{background:#fafcff}
+.pill{display:inline-block;padding:5px 9px;border-radius:99px;font-size:11px;font-weight:900}.activeP{background:#e4f7ef;color:#087a4d}.holdP{background:#fff3d9;color:#9a5b00}.suspendP{background:#ffe5e8;color:#a61f2e}.trialP{background:#eee9ff;color:#573db5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}.inbox{display:grid;grid-template-columns:360px 1fr;min-height:560px}.threads{border-right:1px solid var(--line);overflow:auto}.thread{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer}.thread:hover,.thread.selected{background:#f1f6ff}.thread b{display:block;margin-bottom:4px}.thread small{color:var(--muted)}.messagePane{padding:20px}.bubble{background:#f0f4fa;border-radius:12px;padding:13px;margin:10px 0;max-width:75%}.bubble.me{background:#dfeeff;margin-left:auto}.empty{padding:45px;text-align:center;color:var(--muted)}
+.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.formGrid .full{grid-column:1/-1}.formGrid label{font-size:12px;font-weight:850;color:#526077;display:block;margin-bottom:6px}
+.modalBack{position:fixed;inset:0;background:rgba(13,25,45,.48);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}.modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 25px 80px rgba(0,0,0,.25)}.modalHead{padding:17px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modalHead h3{margin:0}.modalBody{padding:20px}.x{border:0;background:#edf1f7;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px}
+.notice{padding:11px 13px;border-radius:9px;background:#eef5ff;color:#24508a;font-size:13px;margin:12px 0}.error{background:#ffe8eb;color:#9d2733}.success{background:#e5f8ef;color:#08774c}
+.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#0c2f69,#1769e0)}.loginCard{width:min(420px,92vw);background:#fff;padding:28px;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.25)}.loginCard h1{margin:0 0 5px}.loginCard p{color:var(--muted);margin:0 0 20px}.loginCard label{font-size:12px;font-weight:850;display:block;margin:12px 0 6px}
+.section{display:none}.section.active{display:block}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:2px solid var(--line);padding-bottom:10px}
+.tab{border:1px solid #d7dfeb;background:#f6f9fd;color:#21304a;border-radius:9px;padding:8px 13px;font-weight:800;cursor:pointer}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tabBody{display:none}.tabBody.active{display:block}
+.kv{display:grid;grid-template-columns:180px 1fr;gap:6px 14px;font-size:14px}.kv b{color:#526077;font-weight:800}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.rrRow{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;background:#fafcff;padding:11px 13px;flex-wrap:wrap;margin-bottom:8px}
+.rrRow .grow{min-width:160px;flex:1}
+.installBanner{background:#fff7e0;color:#7a5a00;border:1px solid #eed48a;border-radius:10px;padding:10px 12px;font-weight:700;margin:10px 0}
+.bubble2{background:#f0f4fa;border-radius:11px;padding:10px 12px;margin:7px 0;max-width:85%}.bubble2.me{background:#dfeeff;margin-left:auto}
+.pill{cursor:default}.pTRIAL{background:#eee9ff;color:#573db5}.pACTIVE{background:#e4f7ef;color:#087a4d}.pREAD_ONLY,.pON_HOLD,.pBILLING_HOLD{background:#fff3d9;color:#9a5b00}.pSUSPENDED,.pLOCKED{background:#ffe5e8;color:#a61f2e}.pARCHIVED,.pCANCELLED,.pPENDING_DELETION{background:#f0f0f4;color:#6b6b7d}
+.statusNote{font-size:12px;color:var(--muted);margin-top:6px}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.shell{grid-template-columns:82px 1fr}.brand{font-size:0}.brand:before{content:"RR";font-size:20px}.brand small{display:none}.nav button{font-size:0;text-align:center}.nav button:before{font-size:18px}.nav button[data-page="dashboard"]:before{content:"⌂"}.nav button[data-page="accounts"]:before{content:"▦"}.nav button[data-page="users"]:before{content:"♙"}.nav button[data-page="inbox"]:before{content:"✉"}.nav button[data-page="messages"]:before{content:"◉"}.nav button[data-page="billing"]:before{content:"$"}.nav button[data-page="activity"]:before{content:"↻"}.nav button[data-page="settings"]:before{content:"⚙"}.userline{display:none}}
+@media(max-width:700px){.shell{display:block}.sidebar{position:static;height:auto}.nav{display:grid;grid-template-columns:repeat(4,1fr)}.sideBottom{display:none}.content{padding:14px}.cards,.grid2,.formGrid{grid-template-columns:1fr}.inbox{grid-template-columns:1fr}.threads{border-right:0;max-height:260px}.topbar{padding:0 14px}}
+</style>
+<body>
+<div id="loginView" class="login">
+  <div class="loginCard">
+    <h1>RaiseRoster</h1><p>Super Admin Control Center</p>
+    <label>Email</label><input id="loginEmail" type="email" autocomplete="username">
+    <label>Password</label><input id="loginPassword" type="password" autocomplete="current-password">
+    <button id="loginBtn" class="btn primary" style="width:100%;margin-top:16px">Sign In</button>
+    <div id="loginStatus"></div>
+  </div>
+</div>
+
+<div id="app" class="shell hidden">
+  <aside class="sidebar">
+    <div class="brand">RaiseRoster<small>SUPER ADMIN</small></div>
+    <div class="nav">
+      <button class="active" data-page="dashboard">Dashboard</button>
+      <button data-page="accounts">Accounts</button>
+      <button data-page="users">Users</button>
+      <button data-page="inbox">Inbox <span id="inboxBadge" class="badge hidden">0</span></button>
+      <button data-page="messages">Messages</button>
+      <button data-page="billing">Billing & Plans</button>
+      <button data-page="videos">Training Videos</button>
+      <button data-page="activity">Audit Log</button>
+      <button data-page="settings">Platform Settings</button>
+    </div>
+    <div class="sideBottom"><div id="signedInAs" class="userline"></div><button id="signOutBtn" class="signout">Sign Out</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><h1 id="pageTitle">Dashboard</h1><div class="topActions"><button id="refreshBtn" class="btn">Refresh</button><button id="newAccountTopBtn" class="btn primary">+ New Account</button></div></header>
+    <div class="content">
+
+      <section id="page-dashboard" class="section active">
+        <div class="cards">
+          <div class="stat"><div class="label">TOTAL ACCOUNTS</div><div id="statAccounts" class="num">—</div><div class="sub">Organizations in RaiseRoster</div></div>
+          <div class="stat"><div class="label">ACTIVE</div><div id="statActive" class="num">—</div><div class="sub">Currently active accounts</div></div>
+          <div class="stat"><div class="label">USERS</div><div id="statUsers" class="num">—</div><div class="sub">Account administrators</div></div>
+          <div class="stat"><div class="label">NEW INBOX</div><div id="statInbox" class="num">—</div><div class="sub">Feedback & requests</div></div>
+        </div>
+        <div class="grid2">
+          <div class="panel"><div class="panelHead"><h2>Recent Accounts</h2><button class="btn" data-go="accounts">View All</button></div><div id="recentAccounts" class="panelBody"></div></div>
+          <div class="panel"><div class="panelHead"><h2>Latest Feedback</h2><button class="btn" data-go="inbox">Open Inbox</button></div><div id="recentFeedback" class="panelBody"></div></div>
+        </div>
+      </section>
+
+      <section id="page-accounts" class="section">
+        <div class="panel"><div class="panelHead"><h2>Accounts</h2><button id="newAccountBtn" class="btn primary">+ Create Account</button></div>
+          <div class="panelBody"><div class="toolbar"><input id="accountSearch" class="search" placeholder="Search school or organization"><select id="accountFilter" style="width:170px"><option value="">All Statuses</option><option>Active</option><option>Trial</option><option>On Hold</option><option>Suspended</option></select></div></div>
+          <div class="tableWrap"><table><thead><tr><th>Account</th><th>Plan</th><th>Price</th><th>Status</th><th>Users</th><th>Created</th><th>Actions</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="page-users" class="section">
+        <div class="panel"><div class="panelHead"><h2>Users</h2><button id="newUserBtn" class="btn primary">+ New User</button></div>
+          <div class="panelBody"><div class="toolbar"><input id="userSearch" class="search" placeholder="Search name or email"></div></div>
+          <div class="tableWrap"><table><thead><tr><th>User</th><th>Email</th><th>Account</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="page-inbox" class="section">
+        <div class="panel"><div class="panelHead"><h2>Inbox — Feedback & Requests</h2><div class="toolbar"><select id="inboxFilter" style="width:160px"><option value="">All Types</option><option value="feature_request">Feature Requests</option><option value="problem">Problems</option><option value="suggestion">Suggestions</option></select><select id="inboxStatusFilter" style="width:160px"><option value="">All Statuses</option><option>NEW</option><option>READ</option><option>IN_PROGRESS</option><option>WAITING_ON_USER</option><option>DONE</option><option>CLOSED</option></select><select id="inboxSchoolFilter" style="width:180px"><option value="">All Schools</option></select></div></div>
+          <div class="inbox"><div id="threadList" class="threads"></div><div id="messagePane" class="messagePane"><div class="empty">Select a message from the inbox.</div></div></div>
+        </div>
+      </section>
+
+      <section id="page-messages" class="section">
+        <div class="panel"><div class="panelHead"><h2>Send Messages</h2></div><div class="panelBody">
+          <div class="formGrid"><div><label>Send To</label><select id="msgAudience"><option value="school">All users in one school</option><option value="user">One user</option><option value="all">Every RaiseRoster school</option></select></div><div><label>Account</label><input id="msgAccountSearch" placeholder="Search account by name"><select id="msgAccount" style="margin-top:6px"></select></div><div class="full" id="msgUserWrap" style="display:none"><label>User</label><input id="msgUserSearch" placeholder="Search user by name or email"><select id="msgUserSelect" style="margin-top:6px"></select></div><div class="full"><label>Subject</label><input id="msgSubject"></div><div class="full"><label>Message</label><textarea id="msgText"></textarea></div><div class="full"><button id="sendMessageBtn" class="btn primary">Send Message</button><div id="messageStatus"></div></div></div>
+        </div></div>
+      </section>
+
+      <section id="page-billing" class="section">
+        <div id="billingInstall"></div>
+        <div class="grid2">
+          <div class="panel"><div class="panelHead"><h2>Plans</h2></div><div class="panelBody">
+            <div class="row"><input id="plName" placeholder="Plan name" style="max-width:160px"><input id="plMonthly" type="number" step=".01" placeholder="Monthly $" style="max-width:120px"><input id="plAnnual" type="number" step=".01" placeholder="Annual $" style="max-width:120px"><button id="plAddBtn" class="btn primary">+ Add</button></div>
+            <div id="plansList" style="margin-top:12px"></div></div></div>
+          <div class="panel"><div class="panelHead"><h2>Discounts</h2></div><div class="panelBody">
+            <div class="row"><input id="dcName" placeholder="Discount name" style="max-width:160px"><select id="dcKind" style="max-width:110px"><option value="PERCENT">% off</option><option value="FIXED">$ off</option></select><input id="dcValue" type="number" step=".01" placeholder="Value" style="max-width:100px"><button id="dcAddBtn" class="btn primary">+ Add</button></div>
+            <div id="discountsList" style="margin-top:12px"></div></div></div>
+        </div>
+        <div class="panel"><div class="panelHead"><h2>Account Billing</h2><div class="statusNote">Metadata only — Stripe payment processing is a deliberate later step (§76).</div></div><div class="tableWrap"><table><thead><tr><th>Account</th><th>Plan</th><th>Regular</th><th>Custom</th><th>Discount</th><th>Final / mo</th><th>Billing Status</th><th>Trial ends</th></tr></thead><tbody id="billingBody"></tbody></table></div></div>
+      </section>
+
+      <section id="page-detail" class="section">
+        <div class="panel"><div class="panelHead"><h2 id="detailTitle">School</h2><div class="row"><span id="detailStatusPill"></span><button id="backToSchoolsBtn" class="btn">← All Schools</button></div></div>
+        <div class="panelBody">
+          <div class="tabs" id="detailTabs">
+            <button class="tab active" data-tab="overview">Overview</button><button class="tab" data-tab="campaigns">Campaigns</button>
+            <button class="tab" data-tab="users">Users</button><button class="tab" data-tab="billing">Billing</button>
+            <button class="tab" data-tab="status">Status History</button><button class="tab" data-tab="support">Support</button>
+            <button class="tab" data-tab="inbox">Inbox</button><button class="tab" data-tab="audit">Audit</button>
+            <button class="tab" data-tab="notes">Notes</button>
+          </div>
+          <div id="detailInstall"></div>
+          <div class="tabBody active" data-tab="overview"><div id="dOverview" class="kv"></div></div>
+          <div class="tabBody" data-tab="campaigns"><div id="dCampaigns"></div></div>
+          <div class="tabBody" data-tab="users"><div id="dUsers"></div>
+            <div class="row" style="margin-top:10px"><input id="dInvEmail" type="email" placeholder="email@example.com" style="max-width:240px"><input id="dInvName" placeholder="Name" style="max-width:170px"><select id="dInvRole" style="max-width:130px"><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select><button id="dInviteBtn" class="btn primary">Invite User</button></div>
+            <div id="dUsersStatus"></div></div>
+          <div class="tabBody" data-tab="billing"><div id="dBilling"></div><div id="dBillingStatus"></div></div>
+          <div class="tabBody" data-tab="status">
+            <div class="formGrid"><div><label>New status</label><select id="dNewStatus">
+              <option>ACTIVE</option><option>TRIAL</option><option>READ_ONLY</option><option>ON_HOLD</option><option>BILLING_HOLD</option>
+              <option>SUSPENDED</option><option>LOCKED</option><option>ARCHIVED</option><option>PENDING_DELETION</option><option>CANCELLED</option></select>
+              <div class="statusNote">RLS-level enforcement of these statuses (blocking a locked school's own queries) is the next security pass; the status itself, its history, and audit are real now.</div></div>
+              <div><label>Internal reason (never shown to school)</label><input id="dStatusReason"></div>
+              <div class="full"><label>Optional message shown to the school</label><input id="dStatusMsg"></div>
+              <div class="full"><button id="dSetStatusBtn" class="btn orange">Change Status</button></div></div>
+            <h3>History</h3><div id="dStatusHistory"></div><div id="dStatusStatus"></div></div>
+          <div class="tabBody" data-tab="support">
+            <div class="row"><input id="dSessPurpose" placeholder="Purpose (e.g. Fix duplicate student import)" style="flex:1;max-width:420px"><button id="dSessStartBtn" class="btn primary">Start Support Session</button></div>
+            <div class="statusNote">Sessions are logged with purpose, 60-minute auto-expiry, and audit entries. The in-app support-mode banner + widened access ride the same security pass as status enforcement.</div>
+            <div id="dSessions" style="margin-top:10px"></div><div id="dSessStatus"></div></div>
+          <div class="tabBody" data-tab="inbox"><div id="dInbox"></div></div>
+          <div class="tabBody" data-tab="audit"><div id="dAudit"></div></div>
+          <div class="tabBody" data-tab="notes">
+            <div class="row"><input id="dNoteBody" placeholder="Internal note (never visible to the school — enforced by RLS)" style="flex:1"><button id="dNoteAddBtn" class="btn primary">Add Note</button></div>
+            <div id="dNotes" style="margin-top:10px"></div><div id="dNotesStatus"></div></div>
+        </div></div>
+      </section>
+
+      <section id="page-videos" class="section">
+        <div class="panel"><div class="panelHead"><h2>Training Videos</h2></div><div class="panelBody">
+          <div class="formGrid">
+            <div><label>Title</label><input id="tvTitle"></div><div><label>Category</label><select id="tvCategory"><option>Getting Started</option><option>Donations</option><option>Students &amp; Classes</option><option>Campaign Setup</option><option>Display &amp; Projector</option><option>Raffles &amp; Motivation</option><option>Reports</option></select></div>
+            <div class="full"><label>Description</label><input id="tvDesc"></div>
+            <div><label>Video URL (file upload arrives with private-storage work)</label><input id="tvUrl" placeholder="https://…"></div>
+            <div><label>NEW badge until</label><input id="tvNewUntil" type="date"></div>
+            <div class="full"><button id="tvAddBtn" class="btn primary">Add Video (draft)</button></div>
+          </div>
+          <div id="tvInstall"></div><div id="tvList" style="margin-top:14px"></div><div id="tvStatus"></div>
+        </div></div>
+      </section>
+
+      <section id="page-activity" class="section">
+        <div class="panel"><div class="panelHead"><h2>Platform Audit Log</h2><input id="auditFilter" class="search" placeholder="Filter by school name" style="max-width:280px"></div>
+        <div class="panelBody"><div id="auditInstall"></div></div>
+        <div class="tableWrap"><table><thead><tr><th>Time</th><th>School</th><th>Action</th><th>Description</th></tr></thead><tbody id="activityBody"></tbody></table></div></div>
+      </section>
+
+      <section id="page-settings" class="section">
+        <div class="panel"><div class="panelHead"><h2>System Settings</h2></div><div class="panelBody">
+          <div id="psInstall"></div><div class="formGrid"><div class="full"><label>Global Announcement (shown to all school admins)</label><textarea id="announcement" placeholder="Optional message shown to RaiseRoster admins"></textarea></div><div><label>Default Trial Days</label><input id="trialDays" type="number" min="0" value="14"></div><div><label>Support Email</label><input id="supportEmail" type="email"></div><div class="full"><button id="saveSettingsBtn" class="btn primary">Save Settings</button><div id="settingsStatus"></div></div></div>
+        </div></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="modalBack" class="modalBack hidden"><div class="modal"><div class="modalHead"><h3 id="modalTitle"></h3><button id="closeModalBtn" class="x">×</button></div><div id="modalBody" class="modalBody"></div></div></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL='https://jqylxbqwznoohscjbxrx.supabase.co';
+const SUPABASE_KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+let session=null, membership=null, organizations=[], plans=[], subs=[], discounts=[], orgDiscs=[], threads=[], legacyFeedback=[], memberRows=[], authUsers=[], selectedThread=null, detailOrgId=null, detailOverview=null;
+const titles={dashboard:'Dashboard',accounts:'Accounts',users:'Users',inbox:'Inbox',messages:'Messages',billing:'Billing & Plans',videos:'Training Videos',activity:'Audit Log',settings:'Platform Settings',detail:'School Detail'};
+const NEEDS_0002=/does not exist|relation .* not|schema cache|column .* does not/i;
+const money=v=>'$'+Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function note(el,text,type=''){el.innerHTML=text?`<div class="notice ${type}">${esc(text)}</div>`:''}
+function banner(elId,label){const el=$(elId);if(el)el.innerHTML=`<div class="installBanner">Run <b>migrations/0002 + 0003</b> to activate ${label}. The interface is complete and works immediately afterward.</div>`}
+function clearBanner(elId){const el=$(elId);if(el)el.innerHTML=''}
+function notConn(el,what,needs){note(el,`NOT CONNECTED — ${what} requires ${needs}. Nothing was changed, nothing was faked.`,'error')}
+async function rpc(name,args){const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data}
+async function q(b){const {data,error}=await b;if(error)throw error;return data||[]}
+const RPC_MISSING=n=>new RegExp('function .*'+n,'i');
+function openModal(title,body){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;$('modalBack').classList.remove('hidden')}
+function closeModal(){$('modalBack').classList.add('hidden')}
+function tabWire(tabsId,onShow){const t=$(tabsId);if(!t)return;t.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{t.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));t.parentElement.querySelectorAll('.tabBody').forEach(x=>x.classList.toggle('active',x.dataset.tab===b.dataset.tab));onShow?.(b.dataset.tab)})}
+function showPage(name){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));$('page-'+name)?.classList.add('active');document.querySelector(`.nav button[data-page="${name}"]`)?.classList.add('active');$('pageTitle').textContent=titles[name]||name}
+function parseHash(){const h=location.hash.replace(/^#/,'');const [base,sub]=h.split('/');return {base:titles[base]?base:'dashboard',sub:sub||null}}
+function currentPage(){return parseHash().base}
+function page(name){if(currentPage()===name&&location.hash&&!name.includes('/')){applyPage();return}location.hash='#'+name}
+async function applyPage(){const {base,sub}=parseHash();showPage(base);if(base==='detail'&&sub){detailOrgId=sub;await renderDetail()}if(base==='videos')loadVideos();if(base==='activity')loadAudit();if(base==='settings')loadPlatformSettings()}
+window.addEventListener('hashchange',applyPage);
+function secureNeeded(action){openModal(action,`<div class="notice"><b>${esc(action)}</b> must go through the secure RaiseRoster backend — the browser never contains the service key.</div><button class="btn" id="okSecure">Close</button>`);setTimeout(()=>$('okSecure')?.addEventListener('click',closeModal),0)}
+
+async function verifySuperAdmin(){
+ const {data:{session:s}}=await supabase.auth.getSession(); session=s;
+ if(!session){$('loginView').classList.remove('hidden');$('app').classList.add('hidden');return false}
+ const {data,error}=await supabase.from('organization_members').select('organization_id,role').eq('user_id',session.user.id).eq('role','super_admin').limit(1);
+ if(error||!data||!data.length){await supabase.auth.signOut();note($('loginStatus'),'This login is not authorized for Super Admin.','error');return false}
+ membership=data[0];$('signedInAs').textContent=session.user.email;$('loginView').classList.add('hidden');$('app').classList.remove('hidden');return true
+}
+async function login(){note($('loginStatus'),'Signing in…');const {error}=await supabase.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error){note($('loginStatus'),error.message,'error');return}if(await verifySuperAdmin()){await refreshAll();applyPage()}}
+async function signout(){await supabase.auth.signOut();location.reload()}
+
+/* ---------------- data loading (each independently guarded) ---------------- */
+let schemaReady=true;
+async function loadOrganizations(){
+ try{organizations=await q(supabase.from('organizations').select('id,name,created_at,status,status_message').order('created_at',{ascending:false}))}
+ catch(e){schemaReady=false;const {data}=await supabase.from('organizations').select('id,name,created_at').order('created_at',{ascending:false});organizations=(data||[]).map(o=>({...o,status:null}))}
+}
+async function loadBillingData(){
+ try{[plans,subs,discounts,orgDiscs]=await Promise.all([q(supabase.from('plans').select('*').order('monthly_price')),q(supabase.from('subscriptions').select('*')),q(supabase.from('discounts').select('*')),q(supabase.from('organization_discounts').select('*'))]);clearBanner('billingInstall')}
+ catch(e){plans=[];subs=[];discounts=[];orgDiscs=[];if(NEEDS_0002.test(e.message||''))banner('billingInstall','Plans, Subscriptions and Discounts')}
+}
+async function loadThreads(){
+ try{threads=await q(supabase.from('support_threads').select('*').order('updated_at',{ascending:false}).limit(300));legacyFeedback=[]}
+ catch(e){threads=null;const {data}=await supabase.from('feedback_requests').select('id,organization_id,user_id,request_type,message,created_at').order('created_at',{ascending:false}).limit(200);legacyFeedback=data||[]}
+}
+async function loadMembers(){
+ try{memberRows=await q(supabase.from('organization_members').select('organization_id,user_id,role'))}catch(e){memberRows=[]}
+ try{
+  const r=await supabase.functions.invoke('sa-user-admin',{body:{action:'list_users'}});
+  authUsers=(!r.error&&r.data?.users)?r.data.users:[];
+ }catch(e){authUsers=[]}
+}
+function authUser(id){return authUsers.find(u=>u.id===id)||null}
+function userLabel(id){
+ const u=authUser(id); if(!u)return 'User';
+ const n=(u.name||'').trim(), em=(u.email||'').trim();
+ return n&&em?n+' — '+em:(n||em||'User');
+}
+function userDisabled(id){return !!authUser(id)?.disabled}
+function orgName(id){return organizations.find(x=>x.id===id)?.name||'Account'}
+function subOf(org){return subs.find(s=>s.organization_id===org)}
+function planOf(sub){return plans.find(p=>p.id===sub?.plan_id)}
+function discOf(org){const od=orgDiscs.find(x=>x.organization_id===org);return od?{od,d:discounts.find(d=>d.id===od.discount_id)}:null}
+function effectivePrice(org){
+ const s=subOf(org);if(!s)return null;
+ let base=s.custom_price!=null?Number(s.custom_price):Number(planOf(s)?.monthly_price??NaN);
+ if(!Number.isFinite(base))return null;
+ const dd=discOf(org);
+ if(dd?.d){base=dd.d.kind==='PERCENT'?base*(1-Number(dd.d.value)/100):Math.max(0,base-Number(dd.d.value))}
+ return base;
+}
+const statusPill=s=>s?`<span class="pill p${esc(s)}">${esc(s.replaceAll('_',' '))}</span>`:'<span class="pill" style="background:#eef2f8;color:#5b6b84" title="Run migration 0002 for account statuses">—</span>';
+
+async function refreshAll(){
+ schemaReady=true;
+ await Promise.allSettled([loadOrganizations(),loadBillingData(),loadThreads(),loadMembers()]);
+ renderDashboard();renderAccounts();renderInbox();fillSelects();renderBilling();renderUsers();
+}
+function fillSelects(){
+ filterMessageAccounts();
+ $('inboxSchoolFilter').innerHTML='<option value="">All Schools</option>'+organizations.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');
+ fillMessageUsers();
+}
+function filterMessageAccounts(){
+ const el=$('msgAccount'); if(!el)return;
+ const qv=($('msgAccountSearch')?.value||'').trim().toLowerCase(), keep=el.value;
+ const rows=organizations.filter(o=>!qv||o.name.toLowerCase().includes(qv));
+ el.innerHTML=rows.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');
+ if(rows.some(o=>o.id===keep))el.value=keep;
+ fillMessageUsers();
+}
+function fillMessageUsers(){
+ const el=$('msgUserSelect'); if(!el)return;
+ const org=$('msgAccount')?.value, qv=($('msgUserSearch')?.value||'').trim().toLowerCase(), keep=el.value;
+ const ids=memberRows.filter(m=>m.organization_id===org).map(m=>m.user_id);
+ const rows=authUsers.filter(u=>ids.includes(u.id)&&(!qv||((u.name||'')+' '+(u.email||'')).toLowerCase().includes(qv)));
+ el.innerHTML=rows.map(u=>`<option value="${u.id}">${esc((u.name||'').trim()||u.email||'User')}${u.name&&u.email?' — '+esc(u.email):''}</option>`).join('');
+ if(rows.some(u=>u.id===keep))el.value=keep;
+}
+function renderDashboard(){
+ $('statAccounts').textContent=organizations.length||'—';
+ $('statActive').textContent=schemaReady&&organizations.some(o=>o.status)?organizations.filter(o=>['ACTIVE','TRIAL'].includes(o.status)).length:'—';
+ $('statUsers').textContent=memberRows.length?new Set(memberRows.map(m=>m.user_id)).size:'—';
+ const open=threads?threads.filter(t=>!['DONE','CLOSED'].includes(t.status)).length:legacyFeedback.length;
+ $('statInbox').textContent=open;$('inboxBadge').textContent=open;$('inboxBadge').classList.toggle('hidden',!open);
+ $('recentAccounts').innerHTML=organizations.slice(0,5).map(o=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(o.name)}</b> ${statusPill(o.status)}<div style="font-size:12px;color:var(--muted)">${new Date(o.created_at).toLocaleDateString()}</div></div>`).join('')||'<div class="empty">No accounts available.</div>';
+ const rec=threads?threads.slice(0,5).map(t=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(orgName(t.organization_id))}</b> <span class="pill pTRIAL">${esc(t.status)}</span><div>${esc(t.subject||t.category)}</div><div style="font-size:12px;color:var(--muted)">${new Date(t.updated_at).toLocaleString()}</div></div>`):legacyFeedback.slice(0,5).map(f=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(orgName(f.organization_id))}</b><div>${esc(f.message).slice(0,90)}</div></div>`);
+ $('recentFeedback').innerHTML=rec.join('')||'<div class="empty">No feedback.</div>';
+}
+function renderAccounts(){
+ const qv=$('accountSearch').value.toLowerCase();
+ const list=organizations.filter(o=>o.name.toLowerCase().includes(qv));
+ $('accountsBody').innerHTML=list.map(o=>{const s=subOf(o.id),eff=effectivePrice(o.id);
+  return `<tr><td><b>${esc(o.name)}</b></td><td>${memberRows.filter(m=>m.organization_id===o.id).length||'—'}</td><td>${esc(planOf(s)?.name||'—')}</td><td>${statusPill(o.status)}</td><td>${eff!=null?money(eff)+'/mo':'—'}</td><td>${new Date(o.created_at).toLocaleDateString()}</td><td><button class="btn acctManage" data-id="${o.id}">Open</button></td></tr>`}).join('')
+  ||'<tr><td colspan="7" class="empty">No accounts found.</td></tr>';
+ document.querySelectorAll('.acctManage').forEach(b=>b.onclick=()=>{location.hash='#detail/'+b.dataset.id});
+}
+
+/* ---------------- SCHOOL DETAIL ---------------- */
+async function renderDetail(){
+ const o=organizations.find(x=>x.id===detailOrgId);if(!o){page('accounts');return}
+ $('detailTitle').textContent=o.name;$('detailStatusPill').innerHTML=statusPill(o.status);
+ tabWire('detailTabs');$('backToSchoolsBtn').onclick=()=>page('accounts');
+ const editNameBtn=$('editSchoolNameBtn');
+ if(editNameBtn)editNameBtn.onclick=async()=>{
+   const current=organizations.find(x=>x.id===detailOrgId)?.name||'';
+   const next=prompt('New School / Organization Name:',current);
+   if(next===null)return;
+   const clean=next.trim();
+   if(!clean){alert('School name cannot be blank.');return}
+   if(clean===current)return;
+   try{
+     const {error}=await supabase.from('organizations').update({name:clean}).eq('id',detailOrgId);
+     if(error)throw error;
+     await loadOrganizations();
+     await renderDetail();
+   }catch(e){alert('Could not rename school: '+e.message)}
+ };
+ detailOverview=null;
+ try{detailOverview=await rpc('sa_org_overview',{p_org:detailOrgId});clearBanner('detailInstall')}
+ catch(e){if(RPC_MISSING('sa_org_overview').test(e.message||''))banner('detailInstall','School Detail data (sa_org_overview from migrations/0003)');}
+ const s=subOf(detailOrgId),dd=discOf(detailOrgId),eff=effectivePrice(detailOrgId);
+ const camps=detailOverview?.campaigns||[];
+ const cur=camps.find(c=>c.is_active);
+ $('dOverview').innerHTML=[
+  ['School name',`<span>${esc(o.name)}</span> <button id="overviewEditName" class="btn" title="Edit school name" aria-label="Edit school name" style="padding:3px 7px;margin-left:7px">✎</button>`],['Account status',statusPill(o.status)],['School-facing message',esc(o.status_message||'—')],
+  ['Admin users',detailOverview?detailOverview.user_count:'—'],['Student count',detailOverview?detailOverview.student_count:'—'],
+  ['Current campaign',esc(cur?.name||'—')],['Current campaign total',detailOverview?money(detailOverview.active_campaign_total):'—'],
+  ['Created',new Date(o.created_at).toLocaleDateString()],['Last activity',camps[0]?new Date(camps[0].created_at).toLocaleDateString()+' (latest campaign)':'—'],
+  ['Plan',esc(planOf(s)?.name||'—')],['Regular price',planOf(s)?money(planOf(s).monthly_price)+'/mo':'—'],
+  ['Custom price',s?.custom_price!=null?money(s.custom_price)+'/mo':'—'],
+  ['Discount',dd?.d?esc(dd.d.name)+' ('+(dd.d.kind==='PERCENT'?dd.d.value+'%':money(dd.d.value))+')':'—'],
+  ['Effective price',eff!=null?`<b>${money(eff)}/mo</b>`:'—'],['Billing status',esc(s?.billing_status||'—')]
+ ].map(([k,v])=>`<b>${k}</b><span>${v}</span>`).join('');
+ $('overviewEditName')?.addEventListener('click',async()=>{
+  const next=prompt('New School / Organization Name:',o.name);
+  if(next===null)return; const clean=next.trim(); if(!clean){alert('School name cannot be blank.');return}
+  try{const {error}=await supabase.from('organizations').update({name:clean}).eq('id',detailOrgId);if(error)throw error;await loadOrganizations();await renderDetail()}
+  catch(e){alert('Could not rename school: '+e.message)}
+ });
+ if(!$('deleteAccountDanger')){
+  const box=document.createElement('div');box.id='deleteAccountDanger';box.style='margin-top:24px;padding-top:16px;border-top:1px solid var(--line);text-align:right';
+  box.innerHTML='<button id="deleteAccountBtn" class="btn red">Delete Entire Account</button>';
+  $('dOverview').parentElement.appendChild(box);
+ }
+ $('deleteAccountBtn').onclick=async()=>{
+  const current=organizations.find(x=>x.id===detailOrgId); if(!current)return;
+  if(!confirm('PERMANENTLY delete the entire account "'+current.name+'" and all of its school data? This cannot be undone.'))return;
+  if(prompt('Type DELETE ACCOUNT to confirm:')!=='DELETE ACCOUNT')return;
+  try{
+   const r=await supabase.functions.invoke('sa-user-admin',{body:{action:'delete_account',organization_id:detailOrgId}});
+   if(r.error||r.data?.error)throw new Error(r.data?.error||r.error.message);
+   await refreshAll(); location.hash='#accounts';
+  }catch(e){alert('Could not delete account: '+e.message)}
+ };
+ /* Campaigns tab */
+ $('dCampaigns').innerHTML=camps.map(c=>`<div class="rrRow" data-cid="${c.id}"><div class="grow"><b>${esc(c.name)}</b> <span class="pill p${esc(c.status||'ENDED')}">${esc(c.status||'—')}</span>
+   <div style="font-size:12px;color:var(--muted)">Raised <b>${money(c.total)}</b> · ${c.starts_on||'…'} → ${c.ends_on||'…'} · created ${new Date(c.created_at).toLocaleDateString()}</div></div>
+   <div class="row"><button class="btn cRen">Rename</button>${c.status!=='ACTIVE'?'<button class="btn green cAct">Activate</button>':'<button class="btn orange cEnd">End</button>'}${c.status==='ENDED'?'<button class="btn cArc">Archive</button>':''}</div></div>`).join('')
+   ||'<div class="empty">'+(detailOverview?'No campaigns yet.':'Campaign data appears once sa_org_overview (migration 0003) is installed.')+'</div>';
+ $('dCampaigns').querySelectorAll('.rrRow').forEach(row=>{
+  const cid=row.dataset.cid,c=camps.find(x=>x.id===cid);
+  row.querySelector('.cRen').onclick=async()=>{
+   const nn=prompt('New campaign name.\n\nRename never resets totals, never creates another campaign, never loses contributions, never changes the campaign ID, never destroys history:',c.name);
+   if(!nn||!nn.trim()||nn.trim()===c.name)return;
+   try{await rpc('sa_rename_campaign',{p_campaign_id:cid,p_new_name:nn.trim()});await renderDetail()}
+   catch(e){RPC_MISSING('sa_rename_campaign').test(e.message||'')?notConn($('detailInstall'),'Renaming a campaign','sa_rename_campaign from migrations/0003'):alert('Error: '+e.message)}};
+  const setSt=async st=>{try{await rpc('set_campaign_status',{p_campaign_id:cid,p_status:st});await renderDetail()}catch(e){RPC_MISSING('set_campaign_status').test(e.message||'')?notConn($('detailInstall'),'Campaign lifecycle','set_campaign_status from migrations/0003'):alert('Error: '+e.message)}};
+  row.querySelector('.cAct')?.addEventListener('click',()=>confirm(`Activate "${c.name}"? Money entry will record into it; the current Active campaign becomes Ended.`)&&setSt('ACTIVE'));
+  row.querySelector('.cEnd')?.addEventListener('click',()=>confirm(`End "${c.name}"?`)&&setSt('ENDED'));
+  row.querySelector('.cArc')?.addEventListener('click',()=>setSt('ARCHIVED'));
+ });
+ /* Users tab */
+ const mem=memberRows.filter(m=>m.organization_id===detailOrgId);
+ $('dUsers').innerHTML=mem.map(m=>{const u=authUser(m.user_id),disabled=userDisabled(m.user_id);return `<div class="rrRow"><div class="grow"><b>${esc(u?.name||'—')}</b><div style="font-size:12px;color:var(--muted)">${esc(u?.email||'—')} · Role: ${esc(m.role)} · ${disabled?'Disabled':'Active'}</div></div>
+  <div class="row"><button class="btn uRole" data-uid="${m.user_id}" data-role="${esc(m.role)}">Change Role</button><button class="btn ${disabled?'green':''} uToggle" data-uid="${m.user_id}" data-disabled="${disabled?'1':'0'}">${disabled?'Enable':'Disable'}</button><button class="btn red uDel" data-uid="${m.user_id}">Delete User</button><button class="btn uRec" data-uid="${m.user_id}" data-email="${esc(u?.email||'')}">Password Recovery</button></div></div>`}).join('')||'<div class="empty">No members.</div>';
+ const edge=async body=>{const r=await supabase.functions.invoke('sa-user-admin',{body});if(r.error)throw new Error(r.error.message||'Edge Function unavailable');if(r.data?.error)throw new Error(r.data.error);return r.data};
+ const edgeTry=async(body,okMsg)=>{note($('dUsersStatus'),'Working…');try{await edge(body);note($('dUsersStatus'),okMsg,'ok');await loadMembers();await renderDetail()}catch(e){notConn($('dUsersStatus'),'This user action','the sa-user-admin Edge Function (deploy: supabase functions deploy sa-user-admin). '+e.message)}};
+ $('dUsers').querySelectorAll('.uRole').forEach(b=>b.onclick=()=>{const r=b.dataset.role==='admin'?'super_admin':'admin';if(confirm('Change role to '+r+'?'))edgeTry({action:'set_role',user_id:b.dataset.uid,organization_id:detailOrgId,role:r},'Role updated.')});
+ $('dUsers').querySelectorAll('.uToggle').forEach(b=>b.onclick=()=>{
+  const disabled=b.dataset.disabled==='1',action=disabled?'reactivate':'disable',word=disabled?'enable':'disable';
+  if(confirm((disabled?'Enable':'Disable')+' this user?'))edgeTry({action,user_id:b.dataset.uid,organization_id:detailOrgId},'User '+(disabled?'enabled.':'disabled.'));
+ });
+ $('dUsers').querySelectorAll('.uDel').forEach(b=>b.onclick=()=>{
+  if(b.dataset.uid===session.user.id){alert('You cannot delete your own Super Admin login from here.');return}
+  if(!confirm('DELETE this user permanently?\n\nThis removes the login and organization membership and cannot be undone.'))return;
+  if(prompt('Type DELETE to confirm:')!=='DELETE')return;
+  edgeTry({action:'delete',user_id:b.dataset.uid,organization_id:detailOrgId},'User deleted.');
+ });
+ $('dUsers').querySelectorAll('.uRec').forEach(b=>b.onclick=()=>{const em=b.dataset.email;if(!em){alert('No email found for this user.');return}if(confirm('Send password recovery to '+em+'?'))edgeTry({action:'recovery',email:em,organization_id:detailOrgId},'Recovery link generated & emailed.')});
+ $('dInviteBtn').onclick=()=>{const em=$('dInvEmail').value.trim();if(!em){note($('dUsersStatus'),'Enter an email.','error');return}edgeTry({action:'invite',email:em,name:$('dInvName').value.trim(),organization_id:detailOrgId,role:$('dInvRole').value},'Invitation sent.')};
+ /* Billing tab */
+ $('dBilling').innerHTML=`<div class="formGrid">
+  <div><label>Plan</label><select id="dbPlan"><option value="">—</option>${plans.map(p=>`<option value="${p.id}" ${s?.plan_id===p.id?'selected':''}>${esc(p.name)} (${money(p.monthly_price)}/mo)</option>`).join('')}</select></div>
+  <div><label>Custom monthly price (overrides plan)</label><input id="dbCustom" type="number" step=".01" value="${s?.custom_price??''}"></div>
+  <div><label>Billing status</label><select id="dbStatus">${['TRIAL','CURRENT','PAST_DUE','BILLING_HOLD','SUSPENDED','CANCELLED'].map(x=>`<option ${s?.billing_status===x?'selected':''}>${x}</option>`).join('')}</select></div>
+  <div><label>Trial ends</label><input id="dbTrial" type="date" value="${s?.trial_ends_on||''}"></div>
+  <div><label>Discount</label><select id="dbDiscount"><option value="">— none —</option>${discounts.filter(d=>d.is_active).map(d=>`<option value="${d.id}" ${dd?.d?.id===d.id?'selected':''}>${esc(d.name)} (${d.kind==='PERCENT'?d.value+'%':money(d.value)})</option>`).join('')}</select></div>
+  <div style="align-self:end"><b>Effective: ${eff!=null?money(eff)+'/mo':'—'}</b></div>
+  <div class="full"><button id="dbSaveBtn" class="btn primary">Save Billing</button></div></div>`;
+ $('dbSaveBtn').onclick=async()=>{
+  try{
+   let r=await supabase.from('subscriptions').upsert({organization_id:detailOrgId,plan_id:$('dbPlan').value||null,custom_price:$('dbCustom').value===''?null:Number($('dbCustom').value),billing_status:$('dbStatus').value,trial_ends_on:$('dbTrial').value||null,updated_at:new Date().toISOString()},{onConflict:'organization_id'});
+   if(r.error)throw r.error;
+   r=await supabase.from('organization_discounts').delete().eq('organization_id',detailOrgId);if(r.error)throw r.error;
+   if($('dbDiscount').value){r=await supabase.from('organization_discounts').insert({organization_id:detailOrgId,discount_id:$('dbDiscount').value});if(r.error)throw r.error}
+   note($('dBillingStatus'),'Billing saved ✓','ok');await loadBillingData();await renderDetail();
+  }catch(e){NEEDS_0002.test(e.message||'')?banner('detailInstall','Billing'):note($('dBillingStatus'),'Error: '+e.message,'error')}};
+ /* Status tab */
+ loadStatusHistory();
+ $('dSetStatusBtn').onclick=async()=>{
+  const st=$('dNewStatus').value;
+  if(!confirm(`Change "${o.name}" to ${st}?\n\nReason (internal): ${$('dStatusReason').value||'—'}\nMessage to school: ${$('dStatusMsg').value||'—'}`))return;
+  try{await rpc('sa_set_account_status',{p_org:detailOrgId,p_status:st,p_internal_reason:$('dStatusReason').value||null,p_school_message:$('dStatusMsg').value||null});
+   note($('dStatusStatus'),'Status changed ✓','ok');await loadOrganizations();await renderDetail();
+  }catch(e){RPC_MISSING('sa_set_account_status').test(e.message||'')?notConn($('dStatusStatus'),'Changing account status','sa_set_account_status from migrations/0003'):note($('dStatusStatus'),'Error: '+e.message,'error')}};
+ /* Support sessions */
+ loadSessions();
+ $('dSessStartBtn').onclick=async()=>{
+  const p=$('dSessPurpose').value.trim();if(!p){note($('dSessStatus'),'Enter a purpose.','error');return}
+  try{await rpc('sa_support_session',{p_org:detailOrgId,p_purpose:p});$('dSessPurpose').value='';note($('dSessStatus'),'Session started (auto-expires in 60 min) ✓','ok');loadSessions()}
+  catch(e){RPC_MISSING('sa_support_session').test(e.message||'')?notConn($('dSessStatus'),'Support sessions','sa_support_session from migrations/0003'):note($('dSessStatus'),'Error: '+e.message,'error')}};
+ /* Inbox tab */
+ const orgThreads=(threads||[]).filter(t=>t.organization_id===detailOrgId);
+ $('dInbox').innerHTML=orgThreads.map(t=>`<div class="rrRow" style="cursor:pointer" data-tid="${t.id}"><div class="grow"><b>${esc(t.subject||t.category)}</b> <span class="pill pTRIAL">${esc(t.status)}</span><div style="font-size:12px;color:var(--muted)">${new Date(t.updated_at).toLocaleString()} · ${t.scope==='SCHOOL'?'School-wide':'Private'}</div></div></div>`).join('')||'<div class="empty">'+(threads?'No conversations from this school.':'Threads appear after migrations 0002/0003.')+'</div>';
+ $('dInbox').querySelectorAll('.rrRow').forEach(r=>r.onclick=()=>{page('inbox');setTimeout(()=>selectThread(r.dataset.tid),50)});
+ /* Audit tab */
+ try{const rows=await q(supabase.from('platform_audit_log').select('*').eq('organization_id',detailOrgId).order('created_at',{ascending:false}).limit(100));
+  $('dAudit').innerHTML=rows.map(a=>`<div class="rrRow"><div class="grow"><b>${esc(a.action_key)}</b><div style="font-size:12px;color:var(--muted)">${new Date(a.created_at).toLocaleString()} · ${esc(a.description)}</div></div></div>`).join('')||'<div class="empty">No audit entries for this school yet.</div>';
+ }catch(e){$('dAudit').innerHTML='<div class="empty">The audit log appears after migrations 0002/0003.</div>'}
+ /* Notes tab */
+ loadNotes();
+ $('dNoteAddBtn').onclick=async()=>{
+  const b=$('dNoteBody').value.trim();if(!b)return;
+  try{const {error}=await supabase.from('internal_notes').insert({organization_id:detailOrgId,author:session.user.id,body:b});if(error)throw error;$('dNoteBody').value='';loadNotes()}
+  catch(e){NEEDS_0002.test(e.message||'')?note($('dNotesStatus'),'Internal notes appear after migrations 0002/0003.','error'):note($('dNotesStatus'),'Error: '+e.message,'error')}};
+}
+async function loadStatusHistory(){
+ try{const rows=await q(supabase.from('organization_status_history').select('*').eq('organization_id',detailOrgId).order('created_at',{ascending:false}).limit(50));
+  $('dStatusHistory').innerHTML=rows.map(h=>`<div class="rrRow"><div class="grow"><b>${esc(h.old_status||'—')} → ${esc(h.new_status)}</b><div style="font-size:12px;color:var(--muted)">${new Date(h.created_at).toLocaleString()}${h.internal_reason?' · reason: '+esc(h.internal_reason):''}${h.school_message?' · school sees: “'+esc(h.school_message)+'”':''}</div></div></div>`).join('')||'<div class="empty">No status changes yet.</div>';
+ }catch(e){$('dStatusHistory').innerHTML='<div class="empty">History appears after migrations 0002/0003.</div>'}
+}
+async function loadSessions(){
+ try{const rows=await q(supabase.from('support_sessions').select('*').eq('organization_id',detailOrgId).order('started_at',{ascending:false}).limit(20));
+  $('dSessions').innerHTML=rows.map(s=>{const live=!s.ended_at&&new Date(s.expires_at)>new Date();
+   return `<div class="rrRow"><div class="grow"><b>${esc(s.purpose)}</b> ${live?'<span class="pill pACTIVE">LIVE</span>':''}<div style="font-size:12px;color:var(--muted)">${new Date(s.started_at).toLocaleString()} → ${s.ended_at?new Date(s.ended_at).toLocaleTimeString():'expires '+new Date(s.expires_at).toLocaleTimeString()}</div></div>
+   ${live?`<button class="btn red sessEnd" data-id="${s.id}">End Session</button>`:''}</div>`}).join('')||'<div class="empty">No support sessions yet.</div>';
+  $('dSessions').querySelectorAll('.sessEnd').forEach(b=>b.onclick=async()=>{await rpc('sa_support_session',{p_org:detailOrgId,p_purpose:'-',p_end_session_id:b.dataset.id});loadSessions()});
+ }catch(e){$('dSessions').innerHTML='<div class="empty">Sessions appear after migrations 0002/0003.</div>'}
+}
+async function loadNotes(){
+ try{const rows=await q(supabase.from('internal_notes').select('*').eq('organization_id',detailOrgId).order('created_at',{ascending:false}));
+  $('dNotes').innerHTML=rows.map(n=>`<div class="rrRow"><div class="grow">${esc(n.body)}<div style="font-size:12px;color:var(--muted)">${new Date(n.created_at).toLocaleString()}</div></div><button class="btn red ntDel" data-id="${n.id}">×</button></div>`).join('')||'<div class="empty">No internal notes. Schools can never see these — there is no database policy that lets them.</div>';
+  $('dNotes').querySelectorAll('.ntDel').forEach(b=>b.onclick=async()=>{await supabase.from('internal_notes').delete().eq('id',b.dataset.id);loadNotes()});
+ }catch(e){$('dNotes').innerHTML='<div class="empty">Notes appear after migrations 0002/0003.</div>'}
+}
+
+/* ---------------- GLOBAL INBOX ---------------- */
+function renderInbox(){
+ if(!threads){ /* legacy pre-0002 view */
+  const qv=$('inboxFilter').value;
+  const list=qv?legacyFeedback.filter(f=>f.request_type===qv):legacyFeedback;
+  $('threadList').innerHTML=list.map(f=>`<div class="thread" data-fid="${f.id}"><b>${esc(orgName(f.organization_id))}</b><span>${esc(f.request_type||'feedback')}</span><br><small>${new Date(f.created_at).toLocaleString()}</small></div>`).join('')||'<div class="empty">Inbox is empty.</div>';
+  document.querySelectorAll('.thread').forEach(t=>t.onclick=()=>{const f=legacyFeedback.find(x=>x.id===t.dataset.fid);
+   $('messagePane').innerHTML=`<h2>${esc(orgName(f.organization_id))}</h2><div class="bubble">${esc(f.message)}</div><div class="notice">Replies, statuses and private threads activate after migrations 0002/0003 (this row is from the legacy one-way feedback table).</div>`});
+  return}
+ const ty=$('inboxFilter').value,st=$('inboxStatusFilter').value,sc=$('inboxSchoolFilter').value;
+ const list=threads.filter(t=>(!ty||t.category===ty)&&(!st||t.status===st)&&(!sc||t.organization_id===sc));
+ $('threadList').innerHTML=list.map(t=>`<div class="thread ${selectedThread?.id===t.id?'selected':''}" data-tid="${t.id}"><b>${esc(orgName(t.organization_id))}</b><span>${esc(t.category)} · ${esc(t.status)}</span><br><small>${esc(t.subject||'')} · ${new Date(t.updated_at).toLocaleString()}</small></div>`).join('')||'<div class="empty">No threads match.</div>';
+ document.querySelectorAll('.thread').forEach(t=>t.onclick=()=>selectThread(t.dataset.tid));
+}
+async function selectThread(id){
+ selectedThread=(threads||[]).find(x=>x.id===id);if(!selectedThread)return;renderInbox();
+ let msgs=[];try{msgs=await q(supabase.from('support_messages').select('*').eq('thread_id',id).order('created_at'))}catch(e){}
+ $('messagePane').innerHTML=`<h2 style="margin:0 0 4px">${esc(orgName(selectedThread.organization_id))}</h2>
+  <div style="color:var(--muted);font-size:13px">${esc(selectedThread.category)} · ${esc(selectedThread.scope==='SCHOOL'?'School-wide thread':'Private user thread')} · started ${new Date(selectedThread.created_at).toLocaleString()}</div>
+  <div style="margin:14px 0">${msgs.map(m=>`<div class="bubble2 ${m.sender_is_platform?'me':''}">${esc(m.body)}<div style="font-size:11px;color:var(--muted);margin-top:3px">${m.sender_is_platform?'RaiseRoster team':'School user'} · ${new Date(m.created_at).toLocaleString()}</div></div>`).join('')||'<div class="empty">No messages.</div>'}</div>
+  <textarea id="replyText" placeholder="Reply to this user… (they see it in their Requests page and at their 🔔)"></textarea>
+  <div class="toolbar" style="margin-top:10px"><button id="replyBtn" class="btn primary">Send Reply</button>
+   ${['READ','IN_PROGRESS','WAITING_ON_USER','DONE','CLOSED'].map(s=>`<button class="btn stBtn" data-st="${s}">${s.replaceAll('_',' ')}</button>`).join('')}</div>
+  <div id="threadStatus"></div>`;
+ $('replyBtn').onclick=async()=>{
+  const body=$('replyText').value.trim();if(!body)return;
+  try{await rpc('sa_reply_thread',{p_thread_id:id,p_body:body});note($('threadStatus'),'Reply sent — the user is notified at their bell ✓','ok');await loadThreads();selectThread(id)}
+  catch(e){RPC_MISSING('sa_reply_thread').test(e.message||'')?notConn($('threadStatus'),'Replying','sa_reply_thread from migrations/0003'):note($('threadStatus'),'Error: '+e.message,'error')}};
+ document.querySelectorAll('.stBtn').forEach(b=>b.onclick=async()=>{
+  const {error}=await supabase.from('support_threads').update({status:b.dataset.st,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)note($('threadStatus'),'Error: '+error.message,'error');else{await loadThreads();selectThread(id);renderDashboard()}});
+}
+
+/* ---------------- MESSAGES ---------------- */
+$('msgAudience').onchange=()=>{const v=$('msgAudience').value;$('msgAccount').disabled=v==='all';$('msgAccountSearch').disabled=v==='all';$('msgUserWrap').style.display=v==='user'?'':'none';fillMessageUsers()};
+$('msgAccount').onchange=fillMessageUsers;
+$('msgAccountSearch').oninput=filterMessageAccounts;
+$('msgUserSearch').oninput=fillMessageUsers;
+async function sendMessage(){
+ const t=$('msgSubject').value.trim(),b=$('msgText').value.trim(),aud=$('msgAudience').value;
+ if(!t||!b){note($('messageStatus'),'Subject and message are required.','error');return}
+ note($('messageStatus'),'Sending…');
+ try{
+  if(aud==='all'){let n=0;for(const o of organizations)n+=await rpc('sa_send_message',{p_org:o.id,p_title:t,p_body:b,p_user:null});note($('messageStatus'),`Sent to ${n} user(s) across ${organizations.length} school(s) ✓`,'ok')}
+  else{const n=await rpc('sa_send_message',{p_org:$('msgAccount').value,p_title:t,p_body:b,p_user:aud==='user'?($('msgUserSelect').value||null):null});note($('messageStatus'),`Sent to ${n} user(s) ✓`,'ok')}
+  $('msgSubject').value='';$('msgText').value='';
+ }catch(e){RPC_MISSING('sa_send_message').test(e.message||'')?notConn($('messageStatus'),'Sending messages','sa_send_message from migrations/0003'):note($('messageStatus'),'Error: '+e.message,'error')}
+}
+
+/* ---------------- BILLING PAGE ---------------- */
+function renderBilling(){
+ $('plansList').innerHTML=plans.map(p=>`<div class="rrRow"><div class="grow"><b>${esc(p.name)}</b>${p.is_active?'':' <span class="pill pARCHIVED">Off</span>'}<div style="font-size:12px;color:var(--muted)">${money(p.monthly_price)}/mo${p.annual_price?' · '+money(p.annual_price)+'/yr':''}</div></div><button class="btn plTog" data-id="${p.id}">${p.is_active?'Disable':'Enable'}</button></div>`).join('')||'<div class="empty">No plans yet — add one above.</div>';
+ $('discountsList').innerHTML=discounts.map(d=>`<div class="rrRow"><div class="grow"><b>${esc(d.name)}</b>${d.is_active?'':' <span class="pill pARCHIVED">Off</span>'}<div style="font-size:12px;color:var(--muted)">${d.kind==='PERCENT'?d.value+'% off':money(d.value)+' off'}</div></div><button class="btn dcTog" data-id="${d.id}">${d.is_active?'Disable':'Enable'}</button></div>`).join('')||'<div class="empty">No discounts yet — add one above.</div>';
+ document.querySelectorAll('.plTog').forEach(b=>b.onclick=async()=>{const p=plans.find(x=>x.id===b.dataset.id);await supabase.from('plans').update({is_active:!p.is_active}).eq('id',p.id);await loadBillingData();renderBilling()});
+ document.querySelectorAll('.dcTog').forEach(b=>b.onclick=async()=>{const d=discounts.find(x=>x.id===b.dataset.id);await supabase.from('discounts').update({is_active:!d.is_active}).eq('id',d.id);await loadBillingData();renderBilling()});
+ $('billingBody').innerHTML=organizations.map(o=>{const s=subOf(o.id),p=planOf(s),dd=discOf(o.id),eff=effectivePrice(o.id);
+  return `<tr><td><b>${esc(o.name)}</b></td><td>${esc(p?.name||'—')}</td><td>${p?money(p.monthly_price):'—'}</td><td>${s?.custom_price!=null?money(s.custom_price):'—'}</td><td>${dd?.d?esc(dd.d.name):'—'}</td><td>${eff!=null?'<b>'+money(eff)+'</b>':'—'}</td><td>${esc(s?.billing_status||'—')}</td><td>${s?.trial_ends_on||'—'}</td></tr>`}).join('');
+}
+async function addPlan(){const n=$('plName').value.trim();if(!n)return;try{const {error}=await supabase.from('plans').insert({name:n,monthly_price:Number($('plMonthly').value||0),annual_price:$('plAnnual').value?Number($('plAnnual').value):null});if(error)throw error;$('plName').value='';$('plMonthly').value='';$('plAnnual').value='';await loadBillingData();renderBilling()}catch(e){NEEDS_0002.test(e.message||'')?banner('billingInstall','Plans'):alert(e.message)}}
+async function addDiscount(){const n=$('dcName').value.trim();if(!n)return;try{const {error}=await supabase.from('discounts').insert({name:n,kind:$('dcKind').value,value:Number($('dcValue').value||0)});if(error)throw error;$('dcName').value='';$('dcValue').value='';await loadBillingData();renderBilling()}catch(e){NEEDS_0002.test(e.message||'')?banner('billingInstall','Discounts'):alert(e.message)}}
+
+/* ---------------- USERS PAGE ---------------- */
+function renderUsers(){
+ $('usersBody').innerHTML=memberRows.map(m=>{const u=authUser(m.user_id);return `<tr><td>${esc(u?.name||'—')}</td><td>${esc(u?.email||'—')}</td><td>${esc(orgName(m.organization_id))}</td><td>${esc(m.role)}</td><td>${userDisabled(m.user_id)?'<span class="pill pSUSPENDED">Disabled</span>':'<span class="pill pACTIVE">Active</span>'}</td><td><button class="btn uMng" data-org="${m.organization_id}">Open School</button></td></tr>`}).join('')
+  ||'<tr><td colspan="6" class="empty">No users found.</td></tr>';
+ document.querySelectorAll('.uMng').forEach(b=>b.onclick=()=>{location.hash='#detail/'+b.dataset.org});
+}
+
+/* ---------------- TRAINING VIDEOS ---------------- */
+async function loadVideos(){
+ try{const rows=await q(supabase.from('training_videos').select('*').order('sort_order'));clearBanner('tvInstall');
+  $('tvList').innerHTML=rows.map(v=>`<div class="rrRow" data-id="${v.id}"><div class="grow"><b>${esc(v.title)}</b> ${v.published?'<span class="pill pACTIVE">Published</span>':'<span class="pill pARCHIVED">Draft</span>'}${v.archived_at?' <span class="pill pARCHIVED">Archived</span>':''}${v.is_new_until&&new Date(v.is_new_until)>new Date()?' <span class="pill pTRIAL">NEW</span>':''}
+    <div style="font-size:12px;color:var(--muted)">${esc(v.category)}${v.description?' · '+esc(v.description):''}</div></div>
+   <div class="row"><button class="btn tvUp">↑</button><button class="btn tvPub">${v.published?'Unpublish':'Publish'}</button><button class="btn red tvArc">${v.archived_at?'Restore':'Archive'}</button></div></div>`).join('')||'<div class="empty">No videos yet.</div>';
+  $('tvList').querySelectorAll('.rrRow').forEach((row,i)=>{
+   const id=row.dataset.id,v=rows.find(x=>x.id===id);
+   row.querySelector('.tvPub').onclick=async()=>{await supabase.from('training_videos').update({published:!v.published}).eq('id',id);loadVideos()};
+   row.querySelector('.tvArc').onclick=async()=>{await supabase.from('training_videos').update({archived_at:v.archived_at?null:new Date().toISOString()}).eq('id',id);loadVideos()};
+   row.querySelector('.tvUp').onclick=async()=>{if(i===0)return;await supabase.from('training_videos').update({sort_order:rows[i-1].sort_order-1}).eq('id',id);loadVideos()};
+  });
+ }catch(e){if(NEEDS_0002.test(e.message||''))banner('tvInstall','Training Videos');else note($('tvStatus'),'Error: '+e.message,'error')}
+}
+async function addVideo(){
+ const t=$('tvTitle').value.trim();if(!t){note($('tvStatus'),'Enter a title.','error');return}
+ try{const {error}=await supabase.from('training_videos').insert({title:t,category:$('tvCategory').value,description:$('tvDesc').value.trim()||null,video_url:$('tvUrl').value.trim()||null,is_new_until:$('tvNewUntil').value||null});
+  if(error)throw error;$('tvTitle').value='';$('tvDesc').value='';$('tvUrl').value='';note($('tvStatus'),'Video added as draft — press Publish when ready.','ok');loadVideos();
+ }catch(e){NEEDS_0002.test(e.message||'')?banner('tvInstall','Training Videos'):note($('tvStatus'),'Error: '+e.message,'error')}
+}
+
+/* ---------------- AUDIT PAGE ---------------- */
+async function loadAudit(){
+ try{const rows=await q(supabase.from('platform_audit_log').select('*').order('created_at',{ascending:false}).limit(200));clearBanner('auditInstall');
+  const f=($('auditFilter').value||'').toLowerCase();
+  $('activityBody').innerHTML=rows.filter(a=>!f||orgName(a.organization_id).toLowerCase().includes(f)).map(a=>`<tr><td>${new Date(a.created_at).toLocaleString()}</td><td>${esc(a.organization_id?orgName(a.organization_id):'—')}</td><td>${esc(a.action_key)}</td><td>${esc(a.description)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">No audit entries yet.</td></tr>';
+ }catch(e){if(NEEDS_0002.test(e.message||''))banner('auditInstall','the Audit Log');$('activityBody').innerHTML='<tr><td colspan="4" class="empty">The audit log activates after migrations 0002/0003.</td></tr>'}
+}
+$('auditFilter').oninput=loadAudit;
+
+/* ---------------- PLATFORM SETTINGS ---------------- */
+async function loadPlatformSettings(){
+ try{const rows=await q(supabase.from('platform_settings').select('*'));clearBanner('psInstall');
+  const get=k=>rows.find(r=>r.key===k)?.value?.v??'';
+  $('announcement').value=get('global_announcement');$('trialDays').value=get('default_trial_days')||14;$('supportEmail').value=get('support_email');
+ }catch(e){if(NEEDS_0002.test(e.message||''))banner('psInstall','Platform Settings')}
+}
+async function savePlatformSettings(){
+ note($('settingsStatus'),'Saving…');
+ try{for(const [k,v] of [['global_announcement',$('announcement').value.trim()],['default_trial_days',Number($('trialDays').value||14)],['support_email',$('supportEmail').value.trim()]]){
+   const {error}=await supabase.from('platform_settings').upsert({key:k,value:{v},updated_at:new Date().toISOString()},{onConflict:'key'});if(error)throw error}
+  note($('settingsStatus'),'Settings saved ✓','ok');
+ }catch(e){NEEDS_0002.test(e.message||'')?banner('psInstall','Platform Settings'):note($('settingsStatus'),'Error: '+e.message,'error')}
+}
+
+/* ---------------- CREATE ACCOUNT ---------------- */
+async function createAccountReal(){
+ const name=$('naName').value.trim();if(!name){note($('naStatus'),'School name is required.','error');return}
+ note($('naStatus'),'Creating…');
+ try{
+  const classes=$('naClasses').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const orgId=await rpc('sa_create_account',{p_name:name,p_init_year:true,p_year_name:$('naYear').value.trim()||null,p_default_classes:classes,p_draft_campaign:$('naCampaign').value.trim()||null});
+  let inviteNote='';
+  const em=$('naEmail').value.trim();
+  if(em){try{const r=await supabase.functions.invoke('sa-user-admin',{body:{action:'invite',email:em,name:$('naAdmin').value.trim(),organization_id:orgId,role:'admin'}});
+    if(r.error||r.data?.error)throw new Error(r.data?.error||r.error.message);inviteNote=' Owner invitation emailed ✓';}
+   catch(e){inviteNote=' — NOT CONNECTED: the owner invite needs the sa-user-admin Edge Function ('+e.message+'). The account itself was created; invite the owner after deploying it.'}}
+  note($('naStatus'),`Account "${name}" created atomically ✓${inviteNote}`, inviteNote.includes('NOT CONNECTED')?'':'ok');
+  await loadOrganizations();renderAccounts();renderDashboard();fillSelects();
+ }catch(e){RPC_MISSING('sa_create_account').test(e.message||'')?notConn($('naStatus'),'Creating an account','sa_create_account from migrations/0003'):note($('naStatus'),'Error: '+e.message,'error')}
+}
+function newAccountModal(){openModal('Create New Account',`<div class="formGrid">
+  <div class="full"><label>School / Organization Name</label><input id="naName"></div>
+  <div><label>Owner Name</label><input id="naAdmin"></div><div><label>Owner Email</label><input id="naEmail" type="email"></div>
+  <div><label>School year</label><input id="naYear" placeholder="e.g. 2026-2027"></div>
+  <div><label>Draft campaign name (optional)</label><input id="naCampaign"></div>
+  <div class="full"><label>Classes, comma-separated (optional — leave blank for no classes)</label><input id="naClasses" placeholder=""></div>
+  <div class="full"><button id="createAccountSubmit" class="btn primary">Create Account</button><div id="naStatus"></div></div></div>`);
+  setTimeout(()=>$('createAccountSubmit').onclick=createAccountReal,0)}
+function newUserModal(){openModal('Invite User',`<div class="formGrid"><div><label>Email</label><input id="nuEmail" type="email"></div><div><label>Name</label><input id="nuName"></div><div><label>School</label><select id="nuOrg">${organizations.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select></div><div><label>Role</label><select id="nuRole"><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select></div><div class="full"><button id="nuSubmit" class="btn primary">Send Invite</button><div id="nuStatus"></div></div></div>`);
+ setTimeout(()=>$('nuSubmit').onclick=async()=>{
+  const em=$('nuEmail').value.trim();if(!em){note($('nuStatus'),'Email required.','error');return}
+  note($('nuStatus'),'Inviting…');
+  try{const r=await supabase.functions.invoke('sa-user-admin',{body:{action:'invite',email:em,name:$('nuName').value.trim(),organization_id:$('nuOrg').value,role:$('nuRole').value}});
+   if(r.error||r.data?.error)throw new Error(r.data?.error||r.error.message);
+   note($('nuStatus'),'Invitation sent ✓','ok');await loadMembers();renderUsers();
+  }catch(e){notConn($('nuStatus'),'Inviting a user','the sa-user-admin Edge Function. '+e.message)}},0)}
+
+/* ---------------- wiring ---------------- */
+document.querySelectorAll('.nav button[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>page(b.dataset.go));
+$('closeModalBtn').onclick=closeModal;$('modalBack').onclick=e=>{if(e.target===$('modalBack'))closeModal()};
+$('loginBtn').onclick=login;$('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+$('signOutBtn').onclick=signout;$('refreshBtn').onclick=async()=>{await refreshAll();applyPage()};
+$('newAccountTopBtn').onclick=newAccountModal;$('newAccountBtn').onclick=newAccountModal;$('newUserBtn').onclick=newUserModal;
+$('accountSearch').oninput=renderAccounts;$('accountFilter').onchange=renderAccounts;
+$('inboxFilter').onchange=renderInbox;$('inboxStatusFilter').onchange=renderInbox;$('inboxSchoolFilter').onchange=renderInbox;
+$('sendMessageBtn').onclick=sendMessage;$('plAddBtn').onclick=addPlan;$('dcAddBtn').onclick=addDiscount;
+$('tvAddBtn').onclick=addVideo;$('saveSettingsBtn').onclick=savePlatformSettings;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+if(await verifySuperAdmin()){await refreshAll();await applyPage();}
+</script>
+</body>
+</html>

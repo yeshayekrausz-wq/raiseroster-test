@@ -1,0 +1,10 @@
+{
+  "name": "RaiseRoster Projector",
+  "short_name": "RR Projector",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f8fd",
+  "theme_color": "#17304f",
+  "description": "RaiseRoster live campaign projector"
+}
