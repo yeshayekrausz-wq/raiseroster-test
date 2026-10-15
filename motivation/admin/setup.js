@@ -1,3 +1,4 @@
+import {initRoster} from './roster.js';
 import {SUPABASE_URL,SUPABASE_KEY} from '../../shared/config.js';
 import {resolveMembership} from '../../shared/membership.js';
 const $=id=>document.getElementById(id);
@@ -68,13 +69,23 @@ $('editor').onsubmit=async e=>{
  finally{setBusy(false);}
 };
 window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});
-document.querySelectorAll('header a').forEach(a=>a.addEventListener('click',e=>{if(!mayLeave())e.preventDefault();}));
+document.querySelectorAll('header a, .adminSidebar a[href="../../#home"]').forEach(a=>a.addEventListener('click',e=>{if(!mayLeave())e.preventDefault();}));
 try{
  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');db=createClient(SUPABASE_URL,SUPABASE_KEY);
  const {data,error}=await db.auth.getSession();if(error)throw error;
  if(!data.session){location.replace('../../#motivation');}else{
  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
  if(!member||!['admin','super_admin'].includes(member.role))throw Error('This workspace requires a school administrator account.');
- org=member.organization_id;await load();$('workspace').hidden=false;$('newProgram').disabled=false;status('Connected to your school.');
+ org=member.organization_id;initRoster(db,org);await load();$('workspace').hidden=false;$('newProgram').disabled=false;status('Connected to your school.');
  }
-}catch(e){status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
+}catch(e){$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
+
+let currentRoute='';
+function route(){
+ const next=location.hash==='#settings'?'settings':'dashboard';
+ if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'','#'+currentRoute);return;}
+ if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
+ currentRoute=next;$('settingsView').hidden=next!=='settings';$('rosterView').hidden=next!=='dashboard';
+ $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');
+}
+window.addEventListener('hashchange',route);route();
