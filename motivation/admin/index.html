@@ -1,14 +1,15 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Motivation — admin portal</title><link rel="stylesheet" href="../../shared/hub.css"></head><body><header class="topbar"><a class="brand" href="../../#home"><span class="brandmark">R</span>RaiseRoster</a><a href="../../#motivation">← Motivation</a></header><main><section class="panel placeholder"><div class="eyebrow">MOTIVATION PROGRAM</div><h1>Admin workspace</h1><p id="status" role="status">Checking your account…</p><div id="details" hidden><h2>In preparation</h2><p>This portal is not active yet. No points, cards or exam results can be entered here.</p><p>The next stage will connect exam conditions, weekly card generation, teacher permissions and approval logs.</p><a class="primary" href="../../#home">Back to your programs</a></div></section></main><script type="module">
-try{
- const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
- const {SUPABASE_URL,SUPABASE_KEY}=await import('../../shared/config.js');
- const {resolveMembership}=await import('../../shared/membership.js');
- const db=createClient(SUPABASE_URL,SUPABASE_KEY);
- const {data,error}=await db.auth.getSession();if(error)throw error;
- if(!data.session){location.replace('../../#motivation');}else{
-  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
-  if(!member||!['admin','super_admin'].includes(member.role))throw new Error('This portal is not available for your account.');
-  document.getElementById('status').textContent='Your account is connected.';document.getElementById('details').hidden=false;
- }
-}catch(e){document.getElementById('status').textContent=e.message||'Unable to connect. Please reload.';}
-</script></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hatzlacha — Motivation</title><link rel="stylesheet" href="../../shared/hub.css"><link rel="stylesheet" href="./setup.css"></head>
+<body><header class="topbar"><a class="brand" href="../../#home"><span class="brandmark">R</span>RaiseRoster</a><a id="back" href="../../#motivation">← All motivation programs</a></header>
+<main><div class="intro"><div><div class="eyebrow">MOTIVATION / HATZLACHA</div><h1>Your Hatzlacha programs</h1><p>Create a term and set your own exam points.</p></div><button id="newProgram" class="primary" disabled>+ New program</button></div>
+<p id="status" role="status" aria-live="polite">Connecting to your school…</p>
+<div class="notice">Program setup is available in this version. Student results, cards, redemptions and the projector are not active yet.</div>
+<div class="layout" id="workspace" hidden><aside><h2>Programs & terms</h2><div id="programList"></div></aside>
+<section class="panel"><div id="empty"><h2>Start with a new program</h2><p>Choose a name and term, then add the subjects and score rules you need.</p></div>
+<form id="editor" hidden><div class="section-heading"><h2 id="editorTitle">New Hatzlacha program</h2><span id="revision" class="muted"></span></div>
+<fieldset id="fields"><div class="grid"><label>Program name<input id="programName" dir="auto" maxlength="120" required placeholder="e.g. הצלחה"></label><label>Term name<input id="termName" dir="auto" maxlength="120" required placeholder="e.g. Winter term"></label><label>Start date<input id="startDate" type="date" required></label><label>End date<input id="endDate" type="date" required></label><label>Target points (optional)<input id="targetPoints" type="number" min="1" max="1000000" step="any" placeholder="No target"></label></div>
+<div class="section-heading"><div><h2>Exam points</h2><p class="muted">Set rules separately for each subject. You can also save without subjects and add them later.</p></div><button type="button" id="addSubject">+ Add subject</button></div>
+<p class="explanation">For each exam, the highest minimum score reached determines the points. A score below the first minimum gives 0 points. Points from multiple rows are not added together.</p>
+<div id="subjects"></div>
+</fieldset><div class="actions"><button id="save" class="primary" type="submit">Save program</button><button type="button" id="reload">Reload saved version</button><span id="dirtyLabel" class="muted"></span></div><p id="saveStatus" role="status" aria-live="polite"></p></form>
+</section></div></main><script type="module" src="./setup.js"></script></body></html>
