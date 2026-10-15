@@ -673,6 +673,7 @@ body.projector-blackout.fullscreen-active #fullscreenBtn{display:flex!important;
     Show Last Update
   </label>
   <button id="installAppBtn" class="projectorCtl" style="display:none">Install App</button>
+  <a href="../#campaigns" class="projectorCtl" style="text-decoration:none" id="allProgramsLink">← Programs</a>
   <button id="signOutBtn" class="projectorCtl">Sign Out</button>
 </div>
 
@@ -724,16 +725,36 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL="https://jqylxbqwznoohscjbxrx.supabase.co";
 const SUPABASE_KEY="sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1";
+const viaHub=new URLSearchParams(location.search).get("hub")==="1";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{
   auth:{
     persistSession:true,
     autoRefreshToken:true,
     detectSessionInUrl:true,
     storage:window.localStorage,
-    storageKey:"raiseroster-projector-auth-v1"
+    ...(viaHub?{}:{storageKey:"raiseroster-projector-auth-v1"})
   }
 });
 
+import {resolveMembership} from '../shared/membership.js';
+let projectorOrg=null;
+const originalFrom=supabase.from.bind(supabase);
+const scopedTables=new Set(['campaigns','classes','student_class_assignments','students','contributions','campaign_class_goals','organization_settings','live_control_state']);
+supabase.from=function(table){
+ const query=originalFrom(table);
+ if(scopedTables.has(table)){
+  const select=query.select.bind(query);
+  query.select=(...args)=>select(...args).eq('organization_id',projectorOrg||'00000000-0000-0000-0000-000000000000');
+ }
+ return query;
+};
+async function resolveProjectorOrg(){
+ const {data,error}=await supabase.auth.getSession();if(error)throw error;
+ if(!data.session){projectorOrg=null;return;}
+ const member=await resolveMembership(supabase,data.session.user.id,new URLSearchParams(location.search).get('org'));
+ if(!member)throw new Error('No school membership for this account.');
+ projectorOrg=member.organization_id;
+}
 const money=n=>Number(n||0).toLocaleString("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2});
 const clamp01=x=>!isFinite(x)||x<0?0:x>1?1:x;
 const pctText=p=>Math.round(clamp01(p)*100)+"%";
@@ -830,7 +851,7 @@ async function loadLiveControl(){
     if(/does not exist|relation|schema cache/i.test(e.message||''))liveControlAvailable=false; /* pre-0002: silent, like Step 19 */
   }
 }
-async function loadProjectorSettings(){try{const {data,error}=await supabase.from('organization_settings').select('*').limit(1).maybeSingle();if(error)throw error;if(data)projectorSettings={...projectorSettings,...data,projector_schedule:data.projector_schedule||{weekly:[],dates:[]}};applyProjectorAppearance();applyBlackout()}catch(e){console.warn('Projector settings:',e.message)}}
+async function loadProjectorSettings(){try{await resolveProjectorOrg();const {data,error}=await supabase.from('organization_settings').select('*').limit(1).maybeSingle();if(error)throw error;if(data)projectorSettings={...projectorSettings,...data,projector_schedule:data.projector_schedule||{weekly:[],dates:[]}};applyProjectorAppearance();applyBlackout()}catch(e){console.warn('Projector settings:',e.message)}}
 const qp=new URLSearchParams(location.search);const EMBED_MODE=qp.get('embed')==='1';const PREVIEW_MODE=qp.get('preview')==='1';if(EMBED_MODE)document.body.classList.add('embed-mode');if(PREVIEW_MODE)document.body.classList.add('preview-edit-mode');
 
 
@@ -924,6 +945,7 @@ async function loadLiveData(){
   const badge=document.getElementById("connectionBadge");
   
   try{
+    await resolveProjectorOrg();
     
 
     const {data:campaigns,error:cErr}=await supabase.from("campaigns")
@@ -1082,6 +1104,7 @@ loginEmail.addEventListener("keydown",e=>{if(e.key==="Enter")loginPassword.focus
 
 signOutBtn.addEventListener("click",async()=>{
   await supabase.auth.signOut();
+  if(viaHub){location.href="../";return;}
   loginPassword.value="";
   loginBox.style.display="flex";
 });
@@ -1091,6 +1114,7 @@ window.addEventListener('message',async e=>{
   const {error}=await supabase.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});
   if(!error){loginBox.style.display='none';await loadProjectorSettings();await loadLiveData()}
 });
+if(EMBED_MODE)document.getElementById('allProgramsLink').style.display='none';
 if(EMBED_MODE)parent.postMessage({type:'rr-auth-needed'},location.origin);
 
 supabase.auth.onAuthStateChange((_event,session)=>{

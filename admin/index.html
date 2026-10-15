@@ -635,7 +635,8 @@ body.sidebar-collapsed .adminSidebar{width:64px!important}body.sidebar-collapsed
 <div id="app" class="hidden">
 <div id="welcomeToast" class="welcomeToast"></div>
 <div class="adminSidebar">
-  <h3>Admin Menu</h3>
+  <h3>Campaigns</h3>
+  <a class="sideBtn" href="../#home" style="display:block;text-decoration:none">← All programs</a>
   <button class="sideBtn" id="sideDashboardBtn">Dashboard</button>
   <button class="sideBtn" id="sideCampaignSettingsBtn">Campaign Settings</button>
   <button class="sideBtn" id="sideReportsBtn" type="button">Reports</button>
@@ -2040,7 +2041,7 @@ function renderScheduleOverview(sched=collectSchedule()){
 }
 function draftSnapshot(){return JSON.stringify(projectorDraft)}function pushDesignUndo(){designUndo.push(draftSnapshot());if(designUndo.length>40)designUndo.shift();designRedo=[];updateDesignUndoRedo()}function updateDesignUndoRedo(){$('designUndoBtn').disabled=!designUndo.length;$('designRedoBtn').disabled=!designRedo.length}
 function syncDesignControls(){$('projectorBrightness').value=Math.round(projectorDraft.brightness*100);$('backgroundOpacity').value=Math.round(projectorDraft.backgroundOpacity*100);$('cardDarkness').value=Math.round(projectorDraft.cardDarkness*100);$('projectorBackgroundColor').value=projectorDraft.backgroundColor||'#dce8f5';$('brightnessValue').textContent=Math.round(projectorDraft.brightness*100)+'%';$('backgroundOpacityValue').textContent=Math.round(projectorDraft.backgroundOpacity*100)+'%';$('cardDarknessValue').textContent=Math.round(projectorDraft.cardDarkness*100)+'%';if($('projectorClassColor'))$('projectorClassColor').value=projectorDraft.classColor||'#ffffff';if($('projectorTotalColor'))$('projectorTotalColor').value=projectorDraft.totalColor||'#ffffff';if($('projectorTextColor'))$('projectorTextColor').value=projectorDraft.textColor||'#17304f';if($('projectorAccentColor'))$('projectorAccentColor').value=projectorDraft.accentColor||'#0b7a53'}
-function projectorUrl(params=''){const base=location.protocol==='file:'?'https://raiseroster.com/projector/':'/projector/';return base+(params?'?'+params:'')}
+function projectorUrl(params=''){const base=location.protocol==='file:'?'https://raiseroster.com/projector/':'/projector/';const query=new URLSearchParams(params);if(currentMembership?.organization_id)query.set('org',currentMembership.organization_id);return base+(query.size?'?'+query.toString():'')}
 async function sendSessionToProjectorFrame(frame){
   if(!frame?.contentWindow)return;const {data:{session}}=await supabase.auth.getSession();if(!session)return;
   frame.contentWindow.postMessage({type:'rr-auth-session',access_token:session.access_token,refresh_token:session.refresh_token},location.origin);
@@ -2854,9 +2855,11 @@ async function loadDashboard(){
      RLS remains the real wall; the explicit filter is the belt on top of it, and it
      also makes multi-membership users (support staff) deterministic instead of
      "whichever row limit(1) happened to return" (§10, §154). */
-  const {data:memberships,error:merr}=await supabase.from('organization_members').select('organization_id,role');
+  const {data:memberships,error:merr}=await supabase.from('organization_members').select('organization_id,role').eq('user_id',currentSession.user.id);
   if(merr){msg($('dataStatus'),'Database error: '+merr.message,true);return}
-  currentMembership=(memberships||[]).find(m=>m.role==='admin')||(memberships||[])[0]||null;
+  const selectedOrg=new URLSearchParams(location.search).get('org');
+  currentMembership=selectedOrg?(memberships||[]).find(m=>m.organization_id===selectedOrg):((memberships||[]).find(m=>m.role==='admin')||(memberships||[])[0]||null);
+  if(!currentMembership||!['admin','super_admin'].includes(currentMembership.role))throw new Error('No campaign administrator access for this school.');
   if(!currentMembership){msg($('dataStatus'),'This login is not a member of any RaiseRoster organization. Please contact support.',true);return}
   const org=currentMembership.organization_id;
   const [{data:years,error:yerr},{data:campaigns,error:cerr},{data:classes,error:clerr},{data:students,error:serr},{data:assignments,error:aerr}] = await Promise.all([
@@ -4048,6 +4051,7 @@ $('loginForm').addEventListener('submit',async e=>{
   }catch(_e){}
 
   $('loginStatus').classList.add('hidden');
+  if(new URLSearchParams(location.search).get('recover')!=='1'){location.href='../#home';return;}
   await showSession(data.session);
 });
 
@@ -4118,7 +4122,7 @@ $('createCampaignBtn').onclick=createNewCampaign;
 
 $('undoBtn').onclick=undoLastAction;
 $('redoBtn').onclick=redoLastAction;
-$('logoutBtn').onclick=async()=>{await supabase.auth.signOut();await showSession(null)};
+$('logoutBtn').onclick=async()=>{const {error}=await supabase.auth.signOut();if(error){alert(error.message);return}location.href='../';};
 
 
 /* ================================================================ *
@@ -4896,6 +4900,7 @@ function openLinkPasswordSetup(){
   $('recoveryOverlay').classList.remove('hidden');
 }
 const setupRequested=new URLSearchParams(location.search).get('setup')==='1';
+if(new URLSearchParams(location.search).get('recover')==='1')setTimeout(()=>$('forgotLoginBtn').click(),0);
 supabase.auth.onAuthStateChange((event,session)=>{
   if((event==='PASSWORD_RECOVERY'||event==='SIGNED_IN') && session && setupRequested){
     currentSession=session;

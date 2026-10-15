@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "YKonnect",
-  "short_name": "YKonnect",
-  "description": "Campaign Dashboard",
+  "name": "RaiseRoster",
+  "short_name": "RaiseRoster",
+  "description": "School programs and campaign management",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

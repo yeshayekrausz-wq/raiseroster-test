@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Motivation — projector portal</title><link rel="stylesheet" href="../../shared/hub.css"></head><body><header class="topbar"><a class="brand" href="../../#home"><span class="brandmark">R</span>RaiseRoster</a><a href="../../#motivation">← Motivation</a></header><main><section class="panel placeholder"><div class="eyebrow">MOTIVATION PROGRAM</div><h1>Projector display</h1><p id="status" role="status">Checking your account…</p><div id="details" hidden><h2>In preparation</h2><p>This portal is not active yet. No points, cards or exam results can be entered here.</p><p>The next stage will show rotating student cards, progress meters and verified or pending points.</p><a class="primary" href="../../#home">Back to your programs</a></div></section></main><script type="module">
+try{
+ const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+ const {SUPABASE_URL,SUPABASE_KEY}=await import('../../shared/config.js');
+ const {resolveMembership}=await import('../../shared/membership.js');
+ const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+ const {data,error}=await db.auth.getSession();if(error)throw error;
+ if(!data.session){location.replace('../../#motivation');}else{
+  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
+  if(!member||!['admin','super_admin'].includes(member.role))throw new Error('This portal is not available for your account.');
+  document.getElementById('status').textContent='Your account is connected.';document.getElementById('details').hidden=false;
+ }
+}catch(e){document.getElementById('status').textContent=e.message||'Unable to connect. Please reload.';}
+</script></body></html>

@@ -67,7 +67,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <body>
 <div id="loginView" class="login">
   <div class="loginCard">
-    <h1>RaiseRoster</h1><p>Super Admin Control Center</p>
+    <h1>RaiseRoster</h1><p>Super Admin Control Center</p><a href="../#home">← All programs</a>
     <label>Email</label><input id="loginEmail" type="email" autocomplete="username">
     <label>Password</label><input id="loginPassword" type="password" autocomplete="current-password">
     <button id="loginBtn" class="btn primary" style="width:100%;margin-top:16px">Sign In</button>
@@ -78,6 +78,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 <div id="app" class="shell hidden">
   <aside class="sidebar">
     <div class="brand">RaiseRoster<small>SUPER ADMIN</small></div>
+    <a href="../#home" class="btn" style="display:block;margin:0 0 16px;text-decoration:none">← All programs</a>
     <div class="nav">
       <button class="active" data-page="dashboard">Dashboard</button>
       <button data-page="accounts">Accounts</button>
@@ -93,7 +94,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
   </aside>
 
   <main class="main">
-    <header class="topbar"><h1 id="pageTitle">Dashboard</h1><div class="topActions"><button id="refreshBtn" class="btn">Refresh</button><button id="newAccountTopBtn" class="btn primary">+ New Account</button></div></header>
+    <header class="topbar"><h1 id="pageTitle">Dashboard</h1><div class="topActions"><button id="mobileSignOut" class="btn">Sign Out</button><button id="refreshBtn" class="btn">Refresh</button><button id="newAccountTopBtn" class="btn primary">+ New Account</button></div></header>
     <div class="content">
 
       <section id="page-dashboard" class="section active">
@@ -250,11 +251,11 @@ async function verifySuperAdmin(){
  const {data:{session:s}}=await supabase.auth.getSession(); session=s;
  if(!session){$('loginView').classList.remove('hidden');$('app').classList.add('hidden');return false}
  const {data,error}=await supabase.from('organization_members').select('organization_id,role').eq('user_id',session.user.id).eq('role','super_admin').limit(1);
- if(error||!data||!data.length){await supabase.auth.signOut();note($('loginStatus'),'This login is not authorized for Super Admin.','error');return false}
+ if(error||!data||!data.length){$('loginView').classList.remove('hidden');$('app').classList.add('hidden');note($('loginStatus'),error?error.message:'This login is not authorized for Super Admin. Return to All programs.','error');return false}
  membership=data[0];$('signedInAs').textContent=session.user.email;$('loginView').classList.add('hidden');$('app').classList.remove('hidden');return true
 }
 async function login(){note($('loginStatus'),'Signing in…');const {error}=await supabase.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error){note($('loginStatus'),error.message,'error');return}if(await verifySuperAdmin()){await refreshAll();applyPage()}}
-async function signout(){await supabase.auth.signOut();location.reload()}
+async function signout(){const {error}=await supabase.auth.signOut();if(error){alert(error.message);return}location.href='../';}
 
 /* ---------------- data loading (each independently guarded) ---------------- */
 let schemaReady=true;
@@ -653,7 +654,7 @@ document.querySelectorAll('.nav button[data-page]').forEach(b=>b.onclick=()=>pag
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>page(b.dataset.go));
 $('closeModalBtn').onclick=closeModal;$('modalBack').onclick=e=>{if(e.target===$('modalBack'))closeModal()};
 $('loginBtn').onclick=login;$('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
-$('signOutBtn').onclick=signout;$('refreshBtn').onclick=async()=>{await refreshAll();applyPage()};
+$('mobileSignOut').onclick=signout;$('signOutBtn').onclick=signout;$('refreshBtn').onclick=async()=>{await refreshAll();applyPage()};
 $('newAccountTopBtn').onclick=newAccountModal;$('newAccountBtn').onclick=newAccountModal;$('newUserBtn').onclick=newUserModal;
 $('accountSearch').oninput=renderAccounts;$('accountFilter').onchange=renderAccounts;
 $('inboxFilter').onchange=renderInbox;$('inboxStatusFilter').onchange=renderInbox;$('inboxSchoolFilter').onchange=renderInbox;
