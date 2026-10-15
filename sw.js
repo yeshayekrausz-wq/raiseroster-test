@@ -1,8 +1,8 @@
 // Increment VERSION whenever releasing changes to cached files.
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const CACHE = 'ykonnect-launcher-' + VERSION;
 const BASE = new URL('./', self.location.href);
-const SHELL = ['index.html', 'shared/hub.css', 'shared/hub.js', 'shared/config.js', 'shared/membership.js', 'install.js', 'manifest.webmanifest', 'favicon2.png', 'icons/icon-192.png', 'icons/icon-512.png', 'offline.html'].map(path => new URL(path, BASE).href);
+const SHELL = ['index.html', 'shared/hub.css', 'shared/hub.js', 'shared/programs.js', 'shared/config.js', 'shared/membership.js', 'install.js', 'manifest.webmanifest', 'favicon2.png', 'icons/icon-192.png', 'icons/icon-512.png', 'offline.html'].map(path => new URL(path, BASE).href);
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
   // Do not skipWaiting: never replace an active editing session.

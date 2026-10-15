@@ -112,8 +112,8 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 
       <section id="page-accounts" class="section">
         <div class="panel"><div class="panelHead"><h2>Accounts</h2><button id="newAccountBtn" class="btn primary">+ Create Account</button></div>
-          <div class="panelBody"><div class="toolbar"><input id="accountSearch" class="search" placeholder="Search school or organization"><select id="accountFilter" style="width:170px"><option value="">All Statuses</option><option>Active</option><option>Trial</option><option>On Hold</option><option>Suspended</option></select></div></div>
-          <div class="tableWrap"><table><thead><tr><th>Account</th><th>Plan</th><th>Price</th><th>Status</th><th>Users</th><th>Created</th><th>Actions</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
+          <div class="panelBody"><div class="toolbar"><input id="accountSearch" class="search" placeholder="Search school or organization"><select id="accountFilter" style="width:170px"><option value="">All Statuses</option><option value="ACTIVE">Active</option><option value="TRIAL">Trial</option><option value="READ_ONLY">Read Only</option><option value="ON_HOLD">On Hold</option><option value="BILLING_HOLD">Billing Hold</option><option value="SUSPENDED">Suspended</option><option value="LOCKED">Locked</option><option value="ARCHIVED">Archived</option><option value="PENDING_DELETION">Pending Deletion</option><option value="CANCELLED">Cancelled</option><option value="UNKNOWN">Unknown</option></select></div></div>
+          <div class="tableWrap"><table><thead><tr><th>Account</th><th>Users</th><th>Plan</th><th>Status</th><th>Price</th><th>Created</th><th>Actions</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
         </div>
       </section>
 
@@ -154,7 +154,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
         <div class="panelBody">
           <div class="tabs" id="detailTabs">
             <button class="tab active" data-tab="overview">Overview</button><button class="tab" data-tab="campaigns">Campaigns</button>
-            <button class="tab" data-tab="users">Users</button><button class="tab" data-tab="billing">Billing</button>
+            <button class="tab" data-tab="programs">Programs</button><button class="tab" data-tab="users">Users</button><button class="tab" data-tab="billing">Billing</button>
             <button class="tab" data-tab="status">Status History</button><button class="tab" data-tab="support">Support</button>
             <button class="tab" data-tab="inbox">Inbox</button><button class="tab" data-tab="audit">Audit</button>
             <button class="tab" data-tab="notes">Notes</button>
@@ -162,6 +162,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
           <div id="detailInstall"></div>
           <div class="tabBody active" data-tab="overview"><div id="dOverview" class="kv"></div></div>
           <div class="tabBody" data-tab="campaigns"><div id="dCampaigns"></div></div>
+          <div class="tabBody" data-tab="programs"><div id="dPrograms"></div></div>
           <div class="tabBody" data-tab="users"><div id="dUsers"></div>
             <div class="row" style="margin-top:10px"><input id="dInvEmail" type="email" placeholder="email@example.com" style="max-width:240px"><input id="dInvName" placeholder="Name" style="max-width:170px"><select id="dInvRole" style="max-width:130px"><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select><button id="dInviteBtn" class="btn primary">Invite User</button></div>
             <div id="dUsersStatus"></div></div>
@@ -170,7 +171,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
             <div class="formGrid"><div><label>New status</label><select id="dNewStatus">
               <option>ACTIVE</option><option>TRIAL</option><option>READ_ONLY</option><option>ON_HOLD</option><option>BILLING_HOLD</option>
               <option>SUSPENDED</option><option>LOCKED</option><option>ARCHIVED</option><option>PENDING_DELETION</option><option>CANCELLED</option></select>
-              <div class="statusNote">RLS-level enforcement of these statuses (blocking a locked school's own queries) is the next security pass; the status itself, its history, and audit are real now.</div></div>
+              <div class="statusNote">Account status enforcement has not been verified. Do not use this control as an emergency data-access lock.</div></div>
               <div><label>Internal reason (never shown to school)</label><input id="dStatusReason"></div>
               <div class="full"><label>Optional message shown to the school</label><input id="dStatusMsg"></div>
               <div class="full"><button id="dSetStatusBtn" class="btn orange">Change Status</button></div></div>
@@ -219,18 +220,21 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import {createProgramPanel} from '../shared/program-panel.js';
 const SUPABASE_URL='https://jqylxbqwznoohscjbxrx.supabase.co';
 const SUPABASE_KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 let session=null, membership=null, organizations=[], plans=[], subs=[], discounts=[], orgDiscs=[], threads=[], legacyFeedback=[], memberRows=[], authUsers=[], selectedThread=null, detailOrgId=null, detailOverview=null;
+const programPanel=createProgramPanel(supabase,$('dPrograms'));
+let acceptedHash=location.hash;
 const titles={dashboard:'Dashboard',accounts:'Accounts',users:'Users',inbox:'Inbox',messages:'Messages',billing:'Billing & Plans',videos:'Training Videos',activity:'Audit Log',settings:'Platform Settings',detail:'School Detail'};
 const NEEDS_0002=/does not exist|relation .* not|schema cache|column .* does not/i;
 const money=v=>'$'+Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
 function note(el,text,type=''){el.innerHTML=text?`<div class="notice ${type}">${esc(text)}</div>`:''}
-function banner(elId,label){const el=$(elId);if(el)el.innerHTML=`<div class="installBanner">Run <b>migrations/0002 + 0003</b> to activate ${label}. The interface is complete and works immediately afterward.</div>`}
+function banner(elId,label){const el=$(elId);if(el)el.innerHTML=`<div class="installBanner">${esc(label)} is unavailable. Backend setup must be verified before these controls can be used.</div>`}
 function clearBanner(elId){const el=$(elId);if(el)el.innerHTML=''}
 function notConn(el,what,needs){note(el,`NOT CONNECTED — ${what} requires ${needs}. Nothing was changed, nothing was faked.`,'error')}
 async function rpc(name,args){const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data}
@@ -243,7 +247,7 @@ function showPage(name){document.querySelectorAll('.section').forEach(x=>x.class
 function parseHash(){const h=location.hash.replace(/^#/,'');const [base,sub]=h.split('/');return {base:titles[base]?base:'dashboard',sub:sub||null}}
 function currentPage(){return parseHash().base}
 function page(name){if(currentPage()===name&&location.hash&&!name.includes('/')){applyPage();return}location.hash='#'+name}
-async function applyPage(){const {base,sub}=parseHash();showPage(base);if(base==='detail'&&sub){detailOrgId=sub;await renderDetail()}if(base==='videos')loadVideos();if(base==='activity')loadAudit();if(base==='settings')loadPlatformSettings()}
+async function applyPage(){const {base,sub}=parseHash();if(programPanel.isSaving()){history.replaceState(null,'',acceptedHash||'#dashboard');return}if(programPanel.isDirty()&&!confirm('Discard unsaved program menu changes?')){history.replaceState(null,'',acceptedHash||'#dashboard');return}programPanel.reset();acceptedHash=location.hash;showPage(base);if(base==='detail'&&sub){detailOrgId=sub;await renderDetail()}if(base==='videos')loadVideos();if(base==='activity')loadAudit();if(base==='settings')loadPlatformSettings()}
 window.addEventListener('hashchange',applyPage);
 function secureNeeded(action){openModal(action,`<div class="notice"><b>${esc(action)}</b> must go through the secure RaiseRoster backend — the browser never contains the service key.</div><button class="btn" id="okSecure">Close</button>`);setTimeout(()=>$('okSecure')?.addEventListener('click',closeModal),0)}
 
@@ -337,7 +341,8 @@ function renderDashboard(){
 }
 function renderAccounts(){
  const qv=$('accountSearch').value.toLowerCase();
- const list=organizations.filter(o=>o.name.toLowerCase().includes(qv));
+ const filter=$('accountFilter').value;
+ const list=organizations.filter(o=>o.name.toLowerCase().includes(qv)&&(!filter||o.status===filter||(filter==='UNKNOWN'&&!o.status)));
  $('accountsBody').innerHTML=list.map(o=>{const s=subOf(o.id),eff=effectivePrice(o.id);
   return `<tr><td><b>${esc(o.name)}</b></td><td>${memberRows.filter(m=>m.organization_id===o.id).length||'—'}</td><td>${esc(planOf(s)?.name||'—')}</td><td>${statusPill(o.status)}</td><td>${eff!=null?money(eff)+'/mo':'—'}</td><td>${new Date(o.created_at).toLocaleDateString()}</td><td><button class="btn acctManage" data-id="${o.id}">Open</button></td></tr>`}).join('')
   ||'<tr><td colspan="7" class="empty">No accounts found.</td></tr>';
@@ -348,6 +353,7 @@ function renderAccounts(){
 async function renderDetail(){
  const o=organizations.find(x=>x.id===detailOrgId);if(!o){page('accounts');return}
  $('detailTitle').textContent=o.name;$('detailStatusPill').innerHTML=statusPill(o.status);
+ programPanel.render(o.id);
  tabWire('detailTabs');$('backToSchoolsBtn').onclick=()=>page('accounts');
  const editNameBtn=$('editSchoolNameBtn');
  if(editNameBtn)editNameBtn.onclick=async()=>{
@@ -424,8 +430,22 @@ async function renderDetail(){
   <div class="row"><button class="btn uRole" data-uid="${m.user_id}" data-role="${esc(m.role)}">Change Role</button><button class="btn ${disabled?'green':''} uToggle" data-uid="${m.user_id}" data-disabled="${disabled?'1':'0'}">${disabled?'Enable':'Disable'}</button><button class="btn red uDel" data-uid="${m.user_id}">Delete User</button><button class="btn uRec" data-uid="${m.user_id}" data-email="${esc(u?.email||'')}">Password Recovery</button></div></div>`}).join('')||'<div class="empty">No members.</div>';
  const edge=async body=>{const r=await supabase.functions.invoke('sa-user-admin',{body});if(r.error)throw new Error(r.error.message||'Edge Function unavailable');if(r.data?.error)throw new Error(r.data.error);return r.data};
  const edgeTry=async(body,okMsg)=>{note($('dUsersStatus'),'Working…');try{await edge(body);note($('dUsersStatus'),okMsg,'ok');await loadMembers();await renderDetail()}catch(e){notConn($('dUsersStatus'),'This user action','the sa-user-admin Edge Function (deploy: supabase functions deploy sa-user-admin). '+e.message)}};
- $('dUsers').querySelectorAll('.uRole').forEach(b=>b.onclick=()=>{const r=b.dataset.role==='admin'?'super_admin':'admin';if(confirm('Change role to '+r+'?'))edgeTry({action:'set_role',user_id:b.dataset.uid,organization_id:detailOrgId,role:r},'Role updated.')});
+ $('dUsers').querySelectorAll('.uRole').forEach(b=>b.onclick=()=>{
+  const org=detailOrgId,uid=b.dataset.uid;
+  if(uid===session.user.id){alert('Use another authorized Super Admin to change your own platform role.');return;}
+  openModal('Change user role',`<p>${esc(userLabel(uid))}</p><label for="selectedRole">Role</label><select id="selectedRole"><option value="admin">School Admin</option><option value="super_admin">Platform Super Admin</option></select><p class="notice">Platform Super Admin grants platform-wide control. Owner, Deputy and Teacher permissions will be added after the backend permission model is verified.</p><div id="roleStatus" role="status"></div><button id="saveRole" class="btn primary">Save role</button>`);
+  $('selectedRole').value=['admin','super_admin'].includes(b.dataset.role)?b.dataset.role:'';
+  $('saveRole').onclick=async()=>{
+    const role=$('selectedRole').value;if(!role)return;
+    if(role===b.dataset.role){closeModal();return;}
+    if(role==='super_admin'&&!confirm('Grant platform-wide Super Admin control to '+userLabel(uid)+'?'))return;
+    const button=$('saveRole');button.disabled=true;
+    try{await edge({action:'set_role',user_id:uid,organization_id:org,role});closeModal();await loadMembers();renderUsers();if(detailOrgId===org)await renderDetail();}
+    catch(e){note($('roleStatus'),'Role was not changed: '+e.message,'error');button.disabled=false;}
+  };
+ });
  $('dUsers').querySelectorAll('.uToggle').forEach(b=>b.onclick=()=>{
+  if(b.dataset.uid===session.user.id){alert('You cannot disable your own Super Admin login here.');return;}
   const disabled=b.dataset.disabled==='1',action=disabled?'reactivate':'disable',word=disabled?'enable':'disable';
   if(confirm((disabled?'Enable':'Disable')+' this user?'))edgeTry({action,user_id:b.dataset.uid,organization_id:detailOrgId},'User '+(disabled?'enabled.':'disabled.'));
  });
@@ -566,7 +586,9 @@ async function addDiscount(){const n=$('dcName').value.trim();if(!n)return;try{c
 
 /* ---------------- USERS PAGE ---------------- */
 function renderUsers(){
- $('usersBody').innerHTML=memberRows.map(m=>{const u=authUser(m.user_id);return `<tr><td>${esc(u?.name||'—')}</td><td>${esc(u?.email||'—')}</td><td>${esc(orgName(m.organization_id))}</td><td>${esc(m.role)}</td><td>${userDisabled(m.user_id)?'<span class="pill pSUSPENDED">Disabled</span>':'<span class="pill pACTIVE">Active</span>'}</td><td><button class="btn uMng" data-org="${m.organization_id}">Open School</button></td></tr>`}).join('')
+ const term=$('userSearch').value.trim().toLowerCase();
+ const visible=memberRows.filter(m=>{const u=authUser(m.user_id);return !term||[u?.name,u?.email,orgName(m.organization_id),m.role].some(v=>String(v||'').toLowerCase().includes(term));});
+ $('usersBody').innerHTML=visible.map(m=>{const u=authUser(m.user_id);return `<tr><td>${esc(u?.name||'—')}</td><td>${esc(u?.email||'—')}</td><td>${esc(orgName(m.organization_id))}</td><td>${esc(m.role)}</td><td>${userDisabled(m.user_id)?'<span class="pill pSUSPENDED">Disabled</span>':'<span class="pill pACTIVE">Active</span>'}</td><td><button class="btn uMng" data-org="${m.organization_id}">Open School</button></td></tr>`}).join('')
   ||'<tr><td colspan="6" class="empty">No users found.</td></tr>';
  document.querySelectorAll('.uMng').forEach(b=>b.onclick=()=>{location.hash='#detail/'+b.dataset.org});
 }
@@ -654,8 +676,9 @@ document.querySelectorAll('.nav button[data-page]').forEach(b=>b.onclick=()=>pag
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>page(b.dataset.go));
 $('closeModalBtn').onclick=closeModal;$('modalBack').onclick=e=>{if(e.target===$('modalBack'))closeModal()};
 $('loginBtn').onclick=login;$('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
-$('mobileSignOut').onclick=signout;$('signOutBtn').onclick=signout;$('refreshBtn').onclick=async()=>{await refreshAll();applyPage()};
+$('mobileSignOut').onclick=signout;$('signOutBtn').onclick=signout;$('refreshBtn').onclick=async()=>{if(programPanel.isSaving())return;if(programPanel.isDirty()&&!confirm('Discard unsaved program menu changes and refresh?'))return;programPanel.reset();await refreshAll();applyPage()};
 $('newAccountTopBtn').onclick=newAccountModal;$('newAccountBtn').onclick=newAccountModal;$('newUserBtn').onclick=newUserModal;
+$('userSearch').oninput=renderUsers;
 $('accountSearch').oninput=renderAccounts;$('accountFilter').onchange=renderAccounts;
 $('inboxFilter').onchange=renderInbox;$('inboxStatusFilter').onchange=renderInbox;$('inboxSchoolFilter').onchange=renderInbox;
 $('sendMessageBtn').onclick=sendMessage;$('plAddBtn').onclick=addPlan;$('dcAddBtn').onclick=addDiscount;
