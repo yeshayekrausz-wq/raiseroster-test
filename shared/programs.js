@@ -1,7 +1,7 @@
 // Menu settings are not data authorization. Existing backend permissions still apply.
 export const PROGRAMS = Object.freeze([
   {key:'campaigns', name:'Campaigns', description:'Fundraising, contributions and projector.', ready:true, defaultVisible:true},
-  {key:'motivation', name:'Motivation', description:'A group of motivation programs. Hatzlacha program setup is available.', ready:false, defaultVisible:true},
+  {key:'motivation', name:'Motivation', description:'Hatzlacha students, points, cards, reports and display.', ready:true, defaultVisible:true},
   {key:'library', name:'Library', description:'Books, student cards and lending. In preparation.', ready:false, defaultVisible:false},
 ]);
 export const defaultPrograms = () => Object.fromEntries(PROGRAMS.map(p=>[p.key,p.defaultVisible]));

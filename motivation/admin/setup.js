@@ -1,3 +1,4 @@
+import {initWorkspace} from './workspace.js';
 import {initRoster} from './roster.js';
 import {SUPABASE_URL,SUPABASE_KEY} from '../../shared/config.js';
 import {resolveMembership} from '../../shared/membership.js';
@@ -64,7 +65,7 @@ $('editor').onsubmit=async e=>{
  const {data,error}=await db.rpc('rr_motivation_save',{p_org:org,p_id:selected?.id??null,p_config:config,p_expected_revision:selected?.revision??0});
  if(error)throw error;
  const saved={id:data.id,organization_id:org,product_key:'hatzlacha',config,revision:data.revision};
- programs=[saved,...programs.filter(p=>p.id!==saved.id)];open(saved);feedback('Program saved. Your exam rules are ready.','success');
+ programs=[saved,...programs.filter(p=>p.id!==saved.id)];open(saved);window.dispatchEvent(new Event('motivation-programs-changed'));feedback('Program saved. Your exam rules are ready.','success');
  }catch(e){feedback(e.code==='40001'?'Another administrator changed this program. Your edits are still here. Reload the saved version before editing again.':e.message||'Unable to save. Your edits are still here.','error');}
  finally{setBusy(false);}
 };
@@ -76,16 +77,16 @@ try{
  if(!data.session){location.replace('../../#motivation');}else{
  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
  if(!member||!['admin','super_admin'].includes(member.role))throw Error('This workspace requires a school administrator account.');
- org=member.organization_id;initRoster(db,org);await load();$('workspace').hidden=false;$('newProgram').disabled=false;status('Connected to your school.');
+ org=member.organization_id;const roster=initRoster(db,org);await load();initWorkspace(db,org,roster);$('workspace').hidden=false;$('newProgram').disabled=false;status('Connected to your school.');
  }
 }catch(e){$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
 
 let currentRoute='';
 function route(){
- const next=location.hash==='#settings'?'settings':'dashboard';
+ const routes={dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView'};const key=location.hash.slice(1);const next=routes[key]?key:'dashboard';
  if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'','#'+currentRoute);return;}
  if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
- currentRoute=next;$('settingsView').hidden=next!=='settings';$('rosterView').hidden=next!=='dashboard';
+ currentRoute=next;for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash==='#'+next));
  $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');
 }
 window.addEventListener('hashchange',route);route();

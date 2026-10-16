@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+const db=new PGlite();
+const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
+const org=id(1),other=id(2),user=id(3),year=id(4),otherYear=id(5),classA=id(6),classB=id(7),foreign=id(8);
+await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE SCHEMA auth;
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+CREATE TABLE organizations(id uuid PRIMARY KEY);CREATE TABLE organization_members(user_id uuid PRIMARY KEY,organization_id uuid REFERENCES organizations(id),role text);
+CREATE TABLE school_years(id uuid PRIMARY KEY,organization_id uuid REFERENCES organizations(id),is_current boolean);
+CREATE TABLE classes(id uuid PRIMARY KEY,organization_id uuid REFERENCES organizations(id),school_year_id uuid REFERENCES school_years(id),name text,sort_order int DEFAULT 0,is_active boolean DEFAULT true);
+CREATE TABLE students(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid REFERENCES organizations(id),name text NOT NULL,phone text,home_phone text,father_phone text,mother_phone text,other_phone text,gregorian_birthday date,is_archived boolean NOT NULL DEFAULT false);
+CREATE TABLE student_class_assignments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid REFERENCES organizations(id),student_id uuid REFERENCES students(id),school_year_id uuid REFERENCES school_years(id),class_id uuid REFERENCES classes(id),is_current boolean,ended_at timestamptz);
+CREATE UNIQUE INDEX one_current_class_per_student ON student_class_assignments(student_id) WHERE is_current;
+INSERT INTO organizations VALUES('${org}'),('${other}');INSERT INTO organization_members VALUES('${user}','${org}','admin');
+INSERT INTO school_years VALUES('${year}','${org}',true),('${otherYear}','${other}',true);
+INSERT INTO classes(id,organization_id,school_year_id,name) VALUES('${classA}','${org}','${year}','ז א'),('${classB}','${org}','${year}','ז ב'),('${foreign}','${other}','${otherYear}','Other');`);
+
+await db.exec(`CREATE SCHEMA storage;CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);CREATE TABLE storage.objects(id uuid,bucket_id text,name text);ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;CREATE FUNCTION storage.foldername(text) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$SELECT string_to_array($1,'/')$$;`);
+const installer=await readFile(new URL('../migrations/Activate_Motivation_Workspace.sql',import.meta.url),'utf8');await db.exec(installer);await db.exec(installer);
+assert.equal((await db.query("SELECT count(*)::int AS n FROM pg_policies WHERE schemaname='storage'")).rows[0].n,5);await db.close();console.log('PASS complete fresh and repeated installer.');

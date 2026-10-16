@@ -33,10 +33,10 @@ function draw(){
  if(route==='campaigns'){
   $('programs').innerHTML=card('admin','Admin portal','Manage students, contributions, reports and campaign settings.','./admin/'+suffix)+card('projector','Projector portal','Open the live campaign display.','./projector/'+suffix);
  }else if(route==='motivation'){
-  $('programs').innerHTML=card('admin','Admin portal','Open school students, class lists and Hatzlacha program settings.','./motivation/admin/'+suffix,'Program setup')+card('projector','Projector portal','The motivation display is being prepared.','./motivation/projector/'+suffix,'In preparation',true);
+  $('programs').innerHTML=card('admin','Admin portal','Open school students, class lists and Hatzlacha program settings.','./motivation/admin/'+suffix,'Workspace')+card('projector','Projector portal','Choose a program and open its scheduled display from Display Settings.','./motivation/admin/'+suffix+'#display','Display settings');
  }else{
   if(route!=='home')history.replaceState(null,'','#home');
-  $('programs').innerHTML=(schoolMenu.campaigns?card('campaigns','Campaigns','Your fundraising workspace, student accounts and live projector display.','#campaigns','Available'):'')+(schoolMenu.motivation?card('motivation','Motivation','A collection of motivation programs, starting with Hatzlacha.','#motivation','Program setup'):'')+(schoolMenu.library?'<article class="program"><span class="tag">In preparation</span><h2>Library</h2><p>Books, student cards and lending. This program is not available yet.</p></article>':'');
+  $('programs').innerHTML=(schoolMenu.campaigns?card('campaigns','Campaigns','Your fundraising workspace, student accounts and live projector display.','#campaigns','Available'):'')+(schoolMenu.motivation?card('motivation','Motivation','A collection of motivation programs, starting with Hatzlacha.','#motivation','Workspace'):'')+(schoolMenu.library?'<article class="program"><span class="tag">In preparation</span><h2>Library</h2><p>Books, student cards and lending. This program is not available yet.</p></article>':'');
   if(!Object.values(schoolMenu).some(Boolean))$('workspaceStatus').textContent='No programs are shown in this school’s menu. Contact your administrator.';
  }
 }

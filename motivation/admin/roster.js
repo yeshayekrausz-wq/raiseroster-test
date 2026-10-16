@@ -4,7 +4,7 @@ const lastName=s=>{const p=s.trim().split(/\s+/);return (p.pop()||'')+' '+p.join
 const digits=s=>String(s||'').replace(/\D/g,'');
 const phone=s=>{const n=digits(s);return n.length===10?`(${n.slice(0,3)}) ${n.slice(3,6)}-${n.slice(6)}`:n;};
 export function initRoster(db,org){
- let students=[],classes=[],currentClass=null,currentStudent=null,results=[],searchIndex=-1,nav=null,suppressed=false,adding=false,loading=false,request=null;
+ let students=[],classes=[],currentClass=null,currentStudent=null,results=[],searchIndex=-1,nav=null,suppressed=false,adding=false,loading=false,request=null,totals={},onProfile=()=>{},onLoaded=()=>{};
  const group=id=>students.filter(s=>(s.class_id||'unassigned')===id);
  const status=(text,error=false)=>{$('rosterStatus').textContent=text;$('rosterStatus').className=error?'error':'';};
  function render(){
@@ -12,9 +12,9 @@ export function initRoster(db,org){
   $('classes').innerHTML=classes.map(c=>`<button class="classbox" data-class="${esc(c.id)}"><b dir="auto">${esc(c.name)}</b><small>${group(c.id).length} students</small></button>`).join('')||'<p>No active classes. Set up the school year and classes in Campaign Admin first.</p>';
   $('classes').querySelectorAll('button').forEach(b=>b.onclick=()=>openClass(b.dataset.class));
   if(currentClass&&classes.some(c=>c.id===currentClass))openClass(currentClass);else $('classPanel').hidden=true;
-  search();
+  $('allStudents').innerHTML=studentButtons(students);bindStudents($('allStudents'));search();
  }
- function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
+ function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small>${totals[s.id]===undefined?'—':esc(totals[s.id])} pts</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
  function bindStudents(parent){parent.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>openStudent(b.dataset.student));}
  function openClass(id){currentClass=id;$('classTitle').textContent=classes.find(c=>c.id===id)?.name||'';$('classStudents').innerHTML=studentButtons(group(id))||'<p>No students in this class.</p>';bindStudents($('classStudents'));$('classPanel').hidden=false;}
  function clearSearch(){$('studentSearch').value='';$('searchResults').hidden=true;$('studentSearch').setAttribute('aria-expanded','false');$('studentSearch').removeAttribute('aria-activedescendant');results=[];searchIndex=-1;}
@@ -22,7 +22,7 @@ export function initRoster(db,org){
   const s=students.find(s=>s.id===id);if(!s)return;currentStudent=s;
   $('profileName').textContent=s.name;$('profileClass').textContent=classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'Unassigned';
   $('profilePhones').innerHTML=[['Main phone',s.phone],['Home',s.home_phone],['Father',s.father_phone],['Mother',s.mother_phone],['Additional',s.other_phone]].filter(([,n])=>n).map(([label,n])=>`<p>${label}: <span dir="ltr">${esc(phone(n))}</span></p>`).join('')||'<p>No phone numbers saved.</p>';
-  $('campaignProfileLink').href='../../admin/?org='+encodeURIComponent(org)+'&hub=1';clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();
+  $('campaignProfileLink').href='../../admin/?org='+encodeURIComponent(org)+'&hub=1';clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();onProfile(s);
  }
  function search(){
   const q=$('studentSearch').value.trim().toLocaleLowerCase(),n=digits(q);searchIndex=-1;$('studentSearch').removeAttribute('aria-activedescendant');
@@ -45,7 +45,7 @@ export function initRoster(db,org){
    if(!Array.isArray(data?.classes)||!Array.isArray(data?.students))throw Error('Invalid roster response.');
    classes=data.classes;students=data.students.sort((a,b)=>lastName(a.name).localeCompare(lastName(b.name),'he')||a.id.localeCompare(b.id));
    if(students.some(s=>!s.class_id))classes.push({id:'unassigned',name:'Unassigned'});
-   $('rosterContent').hidden=false;render();status('Shared school roster · '+students.length+' students');return true;
+   $('rosterContent').hidden=false;render();status('Shared school roster · '+students.length+' students');onLoaded();return true;
   }catch(e){$('rosterContent').hidden=true;status(e.code==='PGRST202'||e.code==='42883'?'Shared students are not activated yet. Run the Motivation Roster SQL, then press Refresh students.':e.message||'Unable to load students. Try Refresh students.',true);return false;}
   finally{loading=false;$('refreshRoster').disabled=false;}
  }
@@ -59,7 +59,7 @@ export function initRoster(db,org){
  function begin(){if(nav||suppressed||!currentStudent||!$('studentProfile').open)return;nav={id:currentStudent.id,class_id:currentStudent.class_id||'unassigned'};$('profileNavigator').hidden=false;drawNav();}
  document.addEventListener('keydown',e=>{
   if(e.altKey&&e.key==='1'&&!adding&&!$('addStudentDialog').open&&!$('rosterView').hidden){e.preventDefault();if($('studentProfile').open)closeProfile();$('studentSearch').focus();return;}
-  if(!$('studentProfile').open)return;
+  if(!$('studentProfile').open||$('taskDialog')?.open)return;
   if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing){finish(false);if(e.shiftKey)suppressed=true;return;}
   if(e.key==='Shift'){begin();return;}
   if(e.key==='Escape'&&nav){e.preventDefault();e.stopImmediatePropagation();finish(false);suppressed=true;return;}
@@ -94,4 +94,5 @@ export function initRoster(db,org){
  };
  window.addEventListener('beforeunload',e=>{if(adding||($('addStudentDialog').open&&addDirty())){e.preventDefault();e.returnValue='';}});
  refresh();
+ return {refresh,getStudents:()=>students,getClasses:()=>classes,getCurrent:()=>currentStudent,getClass:()=>currentClass,openStudent,setTotals(value){totals=value;render();if(currentStudent)onProfile(currentStudent);},onProfile(fn){onProfile=fn;},onLoaded(fn){onLoaded=fn;}};
 }
