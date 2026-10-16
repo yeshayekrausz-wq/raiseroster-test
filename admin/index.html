@@ -2871,6 +2871,7 @@ async function loadDashboard(){
   ]);
   const error=yerr||cerr||clerr||serr||aerr;if(error){msg($('dataStatus'),'Database error: '+error.message,true);return}
   currentCampaign=campaigns?.[0]||null;
+  await Promise.all((students||[]).map(async student=>{if(student.photo_url?.startsWith('motivation-private:')){const {data,error}=await supabase.storage.from('motivation-media').createSignedUrl(student.photo_url.slice(19),3600);student.photo_url=error?'':data.signedUrl;}}));
   dashboardData={classes:classes||[],students:students||[],assignments:assignments||[],contributions:[],campaigns:campaigns||[],classGoals:[]};
   if(currentCampaign){try{await refreshContributions()}catch(e){msg($('dataStatus'),'Database error: '+e.message,true)}}
   renderDashboardSummary();

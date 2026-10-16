@@ -14,13 +14,13 @@ export function initRoster(db,org){
   if(currentClass&&classes.some(c=>c.id===currentClass))openClass(currentClass);else $('classPanel').hidden=true;
   $('allStudents').innerHTML=studentButtons(students);bindStudents($('allStudents'));search();
  }
- function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small>${totals[s.id]===undefined?'—':esc(totals[s.id])} pts</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
+ function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small dir="ltr">${totals[s.id]===undefined?'—':esc(totals[s.id])} pts</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
  function bindStudents(parent){parent.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>openStudent(b.dataset.student));}
- function openClass(id){currentClass=id;$('classTitle').textContent=classes.find(c=>c.id===id)?.name||'';$('classStudents').innerHTML=studentButtons(group(id))||'<p>No students in this class.</p>';bindStudents($('classStudents'));$('classPanel').hidden=false;}
+ function openClass(id){currentClass=id;$('rosterContent').classList.add('classFocused');$('allStudentsPanel').hidden=true;$('classTitle').textContent=classes.find(c=>c.id===id)?.name||'';$('classStudents').innerHTML=studentButtons(group(id))||'<p>No students in this class.</p>';bindStudents($('classStudents'));$('classPanel').hidden=false;$('classPanel').scrollIntoView({block:'start',behavior:'smooth'});}
  function clearSearch(){$('studentSearch').value='';$('searchResults').hidden=true;$('studentSearch').setAttribute('aria-expanded','false');$('studentSearch').removeAttribute('aria-activedescendant');results=[];searchIndex=-1;}
  function openStudent(id){
   const s=students.find(s=>s.id===id);if(!s)return;currentStudent=s;
-  $('profileName').textContent=s.name;$('profileClass').textContent=classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'Unassigned';
+  $('profileName').textContent=s.name+ (s.short_id?' · #'+s.short_id:'');$('profileClass').textContent=classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'Unassigned';
   $('profilePhones').innerHTML=[['Main phone',s.phone],['Home',s.home_phone],['Father',s.father_phone],['Mother',s.mother_phone],['Additional',s.other_phone]].filter(([,n])=>n).map(([label,n])=>`<p>${label}: <span dir="ltr">${esc(phone(n))}</span></p>`).join('')||'<p>No phone numbers saved.</p>';
   $('campaignProfileLink').href='../../admin/?org='+encodeURIComponent(org)+'&hub=1';clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();onProfile(s);
  }
@@ -41,15 +41,15 @@ export function initRoster(db,org){
  };
  async function refresh(){
   if(loading)return;loading=true;$('refreshRoster').disabled=true;status('Loading school students…');
-  try{const {data,error}=await db.rpc('rr_motivation_roster',{p_org:org});if(error)throw error;
+  try{const {data,error}=await db.rpc('rr_motivation_roster_v5',{p_org:org});if(error)throw error;
    if(!Array.isArray(data?.classes)||!Array.isArray(data?.students))throw Error('Invalid roster response.');
    classes=data.classes;students=data.students.sort((a,b)=>lastName(a.name).localeCompare(lastName(b.name),'he')||a.id.localeCompare(b.id));
    if(students.some(s=>!s.class_id))classes.push({id:'unassigned',name:'Unassigned'});
    $('rosterContent').hidden=false;render();status('Shared school roster · '+students.length+' students');onLoaded();return true;
-  }catch(e){$('rosterContent').hidden=true;status(e.code==='PGRST202'||e.code==='42883'?'Shared students are not activated yet. Run the Motivation Roster SQL, then press Refresh students.':e.message||'Unable to load students. Try Refresh students.',true);return false;}
+  }catch(e){$('rosterContent').hidden=true;status(e.code==='PGRST202'||e.code==='42883'?'Shared students are not activated yet. Run the Stage 5 activation SQL, then press Refresh students.':e.message||'Unable to load students. Try Refresh students.',true);return false;}
   finally{loading=false;$('refreshRoster').disabled=false;}
  }
- $('refreshRoster').onclick=refresh;$('closeClass').onclick=()=>{$('classPanel').hidden=true;currentClass=null;};
+ $('refreshRoster').onclick=refresh;$('closeClass').onclick=()=>{$('rosterContent').classList.remove('classFocused');$('classPanel').hidden=true;$('allStudentsPanel').hidden=false;currentClass=null;};
  function finish(commit){const choice=nav;nav=null;$('profileNavigator').hidden=true;if(commit&&choice&&choice.id!==currentStudent?.id)openStudent(choice.id);}
  function closeProfile(){finish(false);$('studentProfile').close();currentStudent=null;$('studentSearch').focus();}
  $('closeProfile').onclick=closeProfile;
@@ -74,6 +74,7 @@ export function initRoster(db,org){
  $('profileNavigator').onpointerdown=e=>e.preventDefault();
  function addDirty(){return $('newStudentName').value.trim()||$('newStudentPhone').value.trim();}
  function closeAdd(){if(adding)return;if(addDirty()&&!confirm('Discard the new student details?'))return;$('addStudentDialog').close();}
+ $('classAddStudent').onclick=()=>{$('showAddStudent').click();};
  $('showAddStudent').onclick=()=>{
   $('addStudentForm').reset();request=null;$('addStatus').textContent='';$('newStudentClass').innerHTML='<option value="">Choose a class</option>'+classes.filter(c=>c.id!=='unassigned').map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
   if(currentClass&&currentClass!=='unassigned')$('newStudentClass').value=currentClass;$('addStudentDialog').showModal();$('newStudentName').focus();

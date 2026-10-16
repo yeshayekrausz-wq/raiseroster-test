@@ -15,9 +15,9 @@ function list(){
  $('programList').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(mayLeave())open(programs.find(p=>p.id===b.dataset.id));});
 }
 function bandMarkup(b={}){return `<div class="band"><input aria-label="Minimum score" class="minimum" type="number" min="0" max="10000" step="any" required placeholder="Minimum" value="${esc(b.minimum)}"><input aria-label="Points awarded" class="points" type="number" min="0" max="1000000" step="any" required placeholder="Points" value="${esc(b.points)}"><button class="remove remove-band" type="button" aria-label="Remove score rule">×</button></div>`;}
-function addSubject(subject={name:'',max_score:100,bands:[{}]}){
+function addSubject(subject={name:'',max_score:'',bands:[{}]}){
  const el=document.createElement('section');el.className='subject';
- el.innerHTML=`<div class="subject-top"><h3>Subject rules</h3><button class="remove remove-subject" type="button">Remove subject</button></div><div class="grid"><label>Subject name<input class="subject-name" dir="auto" maxlength="80" required placeholder="e.g. חומש" value="${esc(subject.name)}"></label><label>Maximum exam score<input class="max-score" type="number" min="1" max="10000" step="any" required value="${esc(subject.max_score)}"></label></div><div class="bands"><div class="band-head"><span>Minimum score</span><span>Points awarded</span><span></span></div><div class="band-rows">${subject.bands.map(bandMarkup).join('')}</div></div><button class="add-band" type="button">+ Add score rule</button><div class="preview"><label>Try an exam score<input class="try-score" type="number" min="0" step="any" placeholder="Test score"></label><output aria-live="polite">Enter a score to preview</output></div>`;
+ el.innerHTML=`<div class="subject-top"><h3>Subject rules</h3><button class="remove remove-subject" type="button">Remove subject</button></div><div class="grid"><label>Subject name<input class="subject-name" dir="auto" maxlength="80" required  value="${esc(subject.name)}"></label><label>Maximum exam score<input class="max-score" type="number" min="1" max="10000" step="any" required value="${esc(subject.max_score)}"></label></div><div class="bands"><div class="band-head"><span>Minimum score</span><span>Points awarded</span><span></span></div><div class="band-rows">${subject.bands.map(bandMarkup).join('')}</div></div><button class="add-band" type="button">+ Add score rule</button><div class="preview"><label>Try an exam score<input class="try-score" type="number" min="0" step="any" placeholder="Test score"></label><output aria-live="polite">Enter a score to preview</output></div>`;
  el.querySelector('.remove-subject').onclick=()=>{el.remove();changed();};
  el.querySelector('.add-band').onclick=()=>{if(el.querySelectorAll('.band').length>=50){feedback('Maximum 50 rules per subject.','error');return;}el.querySelector('.band-rows').insertAdjacentHTML('beforeend',bandMarkup());changed();preview(el);};
  el.addEventListener('click',e=>{const button=e.target.closest('.remove-band');if(button){button.closest('.band').remove();changed();preview(el);}});
@@ -43,7 +43,7 @@ function preview(el){
  catch(e){output.textContent=e.message;}
 }
 function open(program){
- selected=program||null;const c=program?.config||{name:'הצלחה',term_name:'',start_date:'',end_date:'',target_points:null,subjects:[]};
+ selected=program||null;const c=program?.config||{name:'',term_name:'',start_date:'',end_date:'',target_points:null,subjects:[]};
  for(const [id,key] of [['programName','name'],['termName','term_name'],['startDate','start_date'],['endDate','end_date'],['targetPoints','target_points']])$(id).value=c[key]??'';
  $('subjects').replaceChildren();c.subjects.forEach(addSubject);$('empty').hidden=true;$('editor').hidden=false;
  $('editorTitle').textContent=program?'Edit Hatzlacha program':'New Hatzlacha program';$('revision').textContent=program?`Saved version ${program.revision}`:'';
@@ -83,10 +83,10 @@ try{
 
 let currentRoute='';
 function route(){
- const routes={dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView'};const key=location.hash.slice(1);const next=routes[key]?key:'dashboard';
+ const routes={dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView',teachers:'teachersView'};const key=location.hash.slice(1).split('/')[0];const next=routes[key]?key:'dashboard';
  if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'','#'+currentRoute);return;}
  if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
- currentRoute=next;for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash==='#'+next));
+ currentRoute=next;$('programBar').hidden=next!=='dashboard';for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
  $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');
 }
 window.addEventListener('hashchange',route);route();
