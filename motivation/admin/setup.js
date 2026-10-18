@@ -1,3 +1,4 @@
+import {initNavigation} from './navigation.js';
 import {initWorkspace} from './workspace.js';
 import {initRoster} from './roster.js';
 import {SUPABASE_URL,SUPABASE_KEY} from '../../shared/config.js';
@@ -50,7 +51,7 @@ function open(program){
  dirty=false;$('dirtyLabel').textContent='';feedback('');list();
 }
 async function load(){const {data,error}=await db.rpc('rr_motivation_list',{p_org:org});if(error)throw error;if(!Array.isArray(data))throw Error('Invalid response. Please reload.');programs=data;list();}
-$('newProgram').onclick=()=>{if(mayLeave()){open(null);$('programName').focus();}};
+$('newProgram').onclick=()=>{if(mayLeave()){open(null);location.hash='settings/general';$('programName').focus();}};
 $('addSubject').onclick=()=>{if($('subjects').children.length>=30){feedback('Maximum 30 subjects.','error');return;}addSubject();changed();};
 $('editor').addEventListener('input',e=>{if(!e.target.classList.contains('try-score'))changed();});
 $('reload').onclick=async()=>{if(!mayLeave())return;setBusy(true);const id=selected?.id;try{await load();open(programs.find(p=>p.id===id));feedback('Saved version loaded.');}catch(e){feedback(e.message||'Unable to reload. Your edits are still here.','error');}finally{setBusy(false);}};
@@ -71,22 +72,23 @@ $('editor').onsubmit=async e=>{
 };
 window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});
 document.querySelectorAll('header a, .adminSidebar a[href="../../#home"]').forEach(a=>a.addEventListener('click',e=>{if(!mayLeave())e.preventDefault();}));
+initNavigation();
 try{
  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');db=createClient(SUPABASE_URL,SUPABASE_KEY);
  const {data,error}=await db.auth.getSession();if(error)throw error;
  if(!data.session){location.replace('../../#motivation');}else{
  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
  if(!member||!['admin','super_admin'].includes(member.role))throw Error('This workspace requires a school administrator account.');
- org=member.organization_id;const roster=initRoster(db,org);await load();initWorkspace(db,org,roster);$('workspace').hidden=false;$('newProgram').disabled=false;status('Connected to your school.');
+ org=member.organization_id;const roster=initRoster(db,org);await load();initWorkspace(db,org,roster);window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');
  }
 }catch(e){$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
 
-let currentRoute='';
+let currentRoute='',currentHash=location.hash||'#dashboard';
 function route(){
  const routes={dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView',teachers:'teachersView'};const key=location.hash.slice(1).split('/')[0];const next=routes[key]?key:'dashboard';
- if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'','#'+currentRoute);return;}
+ if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'',currentHash);window.dispatchEvent(new Event('motivation-navigation'));return;}
  if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
- currentRoute=next;$('programBar').hidden=next!=='dashboard';for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
- $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');
+ currentRoute=next;currentHash=location.hash||'#dashboard';$('programBar').hidden=next!=='dashboard';for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
+ $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');window.dispatchEvent(new Event('motivation-navigation'));
 }
 window.addEventListener('hashchange',route);route();
