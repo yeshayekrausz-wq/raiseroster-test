@@ -22,7 +22,7 @@ export function initRoster(db,org){
   const s=students.find(s=>s.id===id);if(!s)return;currentStudent=s;
   $('profileName').textContent=s.name+ (s.short_id?' · #'+s.short_id:'');$('profileClass').textContent=classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'Unassigned';
   $('profilePhones').innerHTML=[['Main phone',s.phone],['Home',s.home_phone],['Father',s.father_phone],['Mother',s.mother_phone],['Additional',s.other_phone]].filter(([,n])=>n).map(([label,n])=>`<p>${label}: <span dir="ltr">${esc(phone(n))}</span></p>`).join('')||'<p>No phone numbers saved.</p>';
-  $('campaignProfileLink').href='../../admin/?org='+encodeURIComponent(org)+'&hub=1';clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();onProfile(s);
+  $('campaignProfileLink').href='../../admin/?org='+encodeURIComponent(org)+'&hub=1';clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();onProfile(s,true);
  }
  function search(){
   const q=$('studentSearch').value.trim().toLocaleLowerCase(),n=digits(q);searchIndex=-1;$('studentSearch').removeAttribute('aria-activedescendant');
@@ -59,7 +59,7 @@ export function initRoster(db,org){
  function begin(){if(nav||suppressed||!currentStudent||!$('studentProfile').open)return;nav={id:currentStudent.id,class_id:currentStudent.class_id||'unassigned'};$('profileNavigator').hidden=false;drawNav();}
  document.addEventListener('keydown',e=>{
   if(e.altKey&&e.key==='1'&&!adding&&!$('addStudentDialog').open&&!$('rosterView').hidden){e.preventDefault();if($('studentProfile').open)closeProfile();$('studentSearch').focus();return;}
-  if(!$('studentProfile').open||$('taskDialog')?.open)return;
+  if(!$('studentProfile').open||$('taskDialog')?.open||document.getElementById('classWarning')?.open)return;
   if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing){finish(false);if(e.shiftKey)suppressed=true;return;}
   if(e.key==='Shift'){begin();return;}
   if(e.key==='Escape'&&nav){e.preventDefault();e.stopImmediatePropagation();finish(false);suppressed=true;return;}
