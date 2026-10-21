@@ -85,7 +85,7 @@ try{
 
 let currentRoute='',currentHash=location.hash||'#dashboard';
 function route(){
- const routes={dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView',teachers:'teachersView'};const key=location.hash.slice(1).split('/')[0];const next=routes[key]?key:'dashboard';
+ const routes={eligibility:'eligibilityView',dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView',teachers:'teachersView'};const key=location.hash.slice(1).split('/')[0];const next=routes[key]?key:'dashboard';
  if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'',currentHash);window.dispatchEvent(new Event('motivation-navigation'));return;}
  if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
  currentRoute=next;currentHash=location.hash||'#dashboard';$('programBar').hidden=next!=='dashboard';for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
