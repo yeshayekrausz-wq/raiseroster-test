@@ -1,0 +1,23 @@
+-- Requires MOTIVATION_RANDOM_CODES_READY.
+BEGIN;
+CREATE OR REPLACE FUNCTION public.rr_reward_release_group(p_org uuid,p_period uuid,p_class uuid,p_revision bigint) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE rev bigint;sid uuid;n int:=0;BEGIN
+ PERFORM public.rr_motivation_require_access(p_org);PERFORM 1 FROM public.organizations WHERE id=p_org FOR UPDATE;
+ SELECT revision INTO rev FROM public.rr_reward_periods WHERE id=p_period AND organization_id=p_org;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Week not found' USING ERRCODE='42501';END IF;
+ IF rev IS DISTINCT FROM p_revision THEN RAISE EXCEPTION 'Week changed. Reload before unfreezing.' USING ERRCODE='40001';END IF;
+ IF p_class IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.classes WHERE id=p_class AND organization_id=p_org) THEN RAISE EXCEPTION 'Class not found' USING ERRCODE='42501';END IF;
+ FOR sid IN SELECT s.id FROM public.students s WHERE s.organization_id=p_org AND (p_class IS NULL OR EXISTS(SELECT 1 FROM public.student_class_assignments a WHERE a.student_id=s.id AND a.organization_id=p_org AND a.is_current AND a.class_id=p_class)) LOOP
+ DELETE FROM public.rr_reward_authorizations WHERE period_id=p_period AND student_id=sid;
+ INSERT INTO public.rr_reward_eligibility(period_id,student_id,choice) VALUES(p_period,sid,'all') ON CONFLICT(period_id,student_id) DO UPDATE SET choice='all';
+ PERFORM public.rr_reward_recalculate(p_period,sid);n:=n+1;
+ INSERT INTO public.rr_motivation_events(organization_id,program_id,student_id,class_id,actor_id,kind,detail) VALUES(p_org,(SELECT program_id FROM public.rr_reward_periods WHERE id=p_period),sid,p_class,auth.uid(),'unfreeze',jsonb_build_object('period',p_period,'percent',100,'scope',CASE WHEN p_class IS NULL THEN 'school' ELSE 'class' END));
+ END LOOP;
+ UPDATE public.rr_reward_periods SET revision=revision+1 WHERE id=p_period;
+ RETURN jsonb_build_object('students',n,'percent',100);
+END $$;
+REVOKE ALL ON FUNCTION public.rr_reward_release_group(uuid,uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.rr_reward_release_group(uuid,uuid,uuid,bigint) TO authenticated;
+NOTIFY pgrst,'reload schema';
+COMMIT;
+SELECT 'MOTIVATION_CLASS_UNFREEZE_READY' AS result;
