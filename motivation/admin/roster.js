@@ -27,7 +27,7 @@ export function initRoster(db,org){
  function search(){
   const q=$('studentSearch').value.trim().toLocaleLowerCase(),n=digits(q);searchIndex=-1;$('studentSearch').removeAttribute('aria-activedescendant');
   if(!q){results=[];$('searchResults').hidden=true;$('studentSearch').setAttribute('aria-expanded','false');return;}
-  results=students.filter(s=>s.name.toLocaleLowerCase().includes(q)||(n.length>0&&[s.phone,s.home_phone,s.father_phone,s.mother_phone,s.other_phone].some(p=>digits(p).includes(n))));
+  results=students.filter(s=>s.name.toLocaleLowerCase().includes(q)||String(s.short_id||'')===q||(n.length>0&&[s.phone,s.home_phone,s.father_phone,s.mother_phone,s.other_phone].some(p=>digits(p).includes(n))));
   $('searchResults').innerHTML=results.length?studentButtons(results):'<p>No matching students.</p>';
   [...$('searchResults').querySelectorAll('button')].forEach((b,i)=>{b.id='search-option-'+i;b.setAttribute('role','option');b.setAttribute('aria-selected','false');b.tabIndex=-1;});bindStudents($('searchResults'));
   $('searchResults').hidden=false;$('studentSearch').setAttribute('aria-expanded','true');
