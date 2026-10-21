@@ -1,36 +1,28 @@
-YK Connect — Reward Cards update
+YK Connect — Random codes and roster update
 
-אינסטאלירן / INSTALL
-1. עפנט Activate_Reward_Cards.txt אין Notepad. קאפירט דעם גאנצן טעקסט אין Supabase → SQL Editor → New query → Run. דער רעזולטאט דארף זיין MOTIVATION_REWARDS_READY.
-   Open Activate_Reward_Cards.txt in a text editor. Paste all of it into Supabase SQL Editor and run. Expected result: MOTIVATION_REWARDS_READY. This requires your existing Stage 5 workspace. The update is one transaction and is safe to run again.
-2. עקסטרעקט דעם ZIP. אין GitHub, אין דער הויפט פלאץ פון raiseroster-test, אפלאוד דעם motivation פאלדער און sw.js מיט די זעלבע פאלדער־סטרוקטור. די נייע פיילס ערזעצן די אלטע פיילס מיט די זעלבע נעמען. Commit changes.
-   Extract the ZIP. Upload the motivation folder and sw.js to the repository root, preserving folders. Replace matching files and commit. Do not paste HTML or the ZIP into SQL Editor.
-3. ווען GitHub Pages איז פארטיג, פארמאכט די אלטע טעבס און עפנט די וועבזייטל נאכאמאל. אויב נויטיג, Ctrl+Shift+R.
-   After Pages deployment finishes, close old tabs and reopen; hard-refresh if needed.
+INSTALL / אינסטאלירן
+This is an update to the previous MOTIVATION_REWARDS_READY version.
+1. Run the complete Activate_Random_Cards.txt in Supabase SQL Editor. Result: MOTIVATION_RANDOM_CODES_READY.
+2. Extract the ZIP. Upload the motivation folder and sw.js at the GitHub repository root, preserving their folder paths. Commit changes.
+3. After deployment, reopen the website and use Ctrl+Shift+R if needed.
+Do not paste HTML into SQL Editor. Use this new SQL file; do not rerun the earlier five-digit installer after this upgrade.
 
-וואס איז ניי / INCLUDED
-• תלמיד ID: 4 ציפערן. נקודות קארטל: 5 ציפערן. באזונדערע 12־ציפעריגע בארקאודס פאר ביידע; קיין געדרוקטע נומער אונטערן בארקאוד.
-  Student IDs: four digits. Reward manual/phone codes: five digits. Separate twelve-digit numeric scanner barcodes; no barcode caption.
-• קארטלעך לויפן נישט אויס. די דאטומען באשטימען די רעכענונג־וואך. ביים שאפן סעלעקטירט מען אויך שול־טעג פאר באפרייען לויט טאג.
-  Cards never expire. Dates identify the accounting period. Select school days when generating; cards are spread over those days within each teacher session. Old cards without an accounting period keep their previous full-credit behavior.
-• מלמדים: גאנצער טאג, פארמיטאג אדער נאכמיטאג. אפילו איין גאנץ־טאג רבי באקומט צוויי באזונדערע באטשעס. פארמיטאג + נאכמיטאג מוז גלייך זיין דער סך־הכל פאר א קינד.
-  Full-day assignments also produce separate AM/PM batches. AM + PM allocation must equal total cards per child. There are no prefilled allocations or point percentages.
-• Select all פאר כתות. נקודות־פראצענטן ווערן צעטיילט באזונדער פאר יעדע כתה, צוזאמען איבער ביידע סדרים. די צעטיילונג פאר יעדע רבי ווערט צופעליג געמישט פון יענער כתה'ס סכום.
-  Configure point values and percentages totaling 100. Each class receives its own exact total, randomly distributed between its teacher/session batches. Exact rounding rejects fractions; the other options assign largest remainders, with ties favoring lower or higher points.
-• Eligibility אין דער זייט: אויסקלייבן וואך און כתה, ALL / לפנה״צ / אחה״צ. נאר איין קעסטל פאר א קינד; קיין קעסטל מיינט Hold. מען קען סעלעקטן די גאנצע כתה און אויסנעמען יחידים.
-  IMPORTANT: new accounting periods start on Hold. Save the class sheet before normal use. Eligibility changes recalculate already redeemed points and control future redemptions. Changing a pupil's choice clears their individual overrides for that week.
-• Unfreeze cards אינעם פראפייל: וואך, טאג, סדר אדער יחידישן קארטל; 100%, 50% אדער אייגענער פראצענט. עס שטעלט דעם סך־הכל באוויליגטע פראצענט; עס לייגט נישט נאכאמאל צו די זעלבע פוינטס.
-  Unfreeze lists redeemed cards that are not fully authorized. Broad releases also cover later redemptions in that scope. More specific overrides take precedence until replaced by a new broader release. Partial points may have decimals. Manual points/exams are not held by this card sheet.
-• סקענען א תלמיד־בארקאוד עפנט זיין פראפייל. סקענען א נקודות־בארקאוד אינעם אפענעם פראפייל קען ארבעטן אן קליקן אין פעלד. א צווייטע איינלייזונג ווערט נישט גערעכנט.
-  Code 128 keyboard scanner with Enter suffix. Student barcode opens a profile globally; reward scanning applies to the open profile. Wrong-class cards require explicit override. Pending saves and dialogs block switching. Existing daily/weekly caps and reveal-next-day settings still apply. Telephone provider integration is still separate; these numeric codes are ready for manual/phone entry.
-• דאונלאוד־קנעפלעך זענען העכער דער ליסטע. סעלעקטירט א Saved card order צו באקומען אלע קארטלעך פון דער באשטעלונג. All teachers / sessions איז דער נארמאלער אויסוואל; מען קען אויסקלייבן איין באטש פאר א איבערדרוק מיט די זעלבע קאודס.
-  Choose a saved order to export every card, not only the recent 500. Each teacher/session starts a separate Word/print section. Word uses two columns with one card per cell. Excel has one row per card with named fields for mail merge and barcode images. PDF uses Print → Save PDF. Teacher cards are sorted by class, then teacher/session.
-• Reset: Program Settings → Reset. אריינשרייבן RESET MOTIVATION און באשטעטיגן. עס מעקט פיזיש אלע Motivation קארטלעך, באשטעלונגען, פוינטס, Hold־באשלוסן און לאגס פאר דער שול. תלמידים, פראפיילס, IDs, כתות, מלמדים און סעטינגס בלייבן. Campaign דאטא בלייבט.
-  Reset is permanent, school-wide across Motivation programs, and requires typed plus dialog confirmation. No reset was run on your live database by this update.
+דער SQL איז פאר די פריערדיגע Rewards ווערסיע וואס איז שוין אינסטאלירט. קאפירט דעם נייעם SQL־טעקסט אין Supabase, און אפלאוד די וועב־פיילס אין GitHub מיט די זעלבע פאלדערס.
 
-IMPORTANT LIMITS
-Five-digit reward codes have a finite supply: 10000–99999 (90,000 codes per school). Used codes are never recycled, including after Reset, so an old printed card cannot redeem a new card by mistake. The application stops generation when that range is exhausted. Four-digit student IDs support 9,000 IDs per school. A larger live deployment will need a decision about code length before these ranges run out.
-Old reward short codes are migrated; old long scanner codes remain accepted for compatibility. Reprint student IDs to use the new numeric student barcode.
+CHANGES / טוישונגען
+• School days removed from card generation. New cards belong to an accounting week and morning/afternoon session, with no invented day assignment. Old cards with assigned days can still be filtered by those days when unfreezing.
+• Reward manual codes are now SIX random numeric digits (100000–999999). Student IDs remain four digits; scanner barcodes remain twelve digits. Each school's code ledger prevents duplicate codes and survives test resets so old codes are never reused. Randomness uses PostgreSQL's cryptographic UUID generator, with rejection sampling. This makes codes nonsequential; it does not replace authenticated access, duplicate-redemption checks, or protections needed in a future public phone service.
+• Existing five-digit reward codes are replaced with random six-digit codes. Reprint reward cards from the saved orders. Existing twelve-digit barcodes remain unchanged. No points or student profiles are deleted by this upgrade.
+• Main-menu section re-entry opens its initial view. Documents closes the generation panel and clears its selected order/filter; Dashboard returns to the class overview; Eligibility returns to week/class selection; Reports clears filters. Saved data stays saved. Unsaved class sheets and open generation/settings forms prompt before leaving; unresolved requests must finish or retry.
+• Hold Shift from any main page to show the student navigator centered on screen. Up/down chooses a student, left/right changes class, releasing Shift opens the profile. Esc cancels. Capital-letter typing is preserved. Editing/confirmation dialogs and pending card operations block profile switching.
+• Search results show the student's short ID and registered phone numbers alongside the name. Profiles display saved address, English/Hebrew birth dates, notes and phone numbers, plus existing pictures and attachments.
+• Dashboard → Bulk add students: choose a class, enter full-field rows or paste tab-separated Excel data. Column order is shown above the paste box. Dates use YYYY-MM-DD. Up to 200 pupils save in one transaction: invalid rows or duplicate names in the same class prevent the entire batch from saving. Retrying an unchanged request does not create duplicates. Photos and attachments continue to be uploaded through Edit Profile / Edit this class after creation.
+• Eligibility uses a compact multi-column class sheet. A 30-pupil class was tested at a 1440×1000 desktop viewport without scrolling the pupil list; smaller screens or bigger classes may still require scrolling.
+• Hold whole school applies to the selected accounting week and active Motivation program, after explicit confirmation. It clears individual releases for that week, places every student on Hold, and recalculates already redeemed card points. Other weeks/programs and manual/exam points are unchanged. It does not delete cards. Use the class sheet or Unfreeze to authorize points afterward.
 
-VALIDATION
-Tested locally: repeated full SQL activation, permissions, exact per-class distribution, AM/PM full-day split, old-period redemption, Hold and percentage recalculation, day/session/individual releases, reset behavior, browser keyboard scanning, eligibility UI, Word and Excel files. Physical scanner hardware and your live Supabase/GitHub Pages deployment were not tested or changed.
+וויכטיג: די אלטע 5־ציפעריגע נקודות־קאודס ווערן געטוישט. דרוקט איבער די נקודות־קארטלעך. די 12־ציפעריגע בארקאודס בלייבן די זעלבע.
+Hold whole school גייט נאר אויף דער אויסגעקליבענער וואך אינעם אקטיוון פראגראם; עס מעקט נישט קיין קארטלעך.
+
+TESTING
+Local database suite: repeated migration, five-to-six digit upgrade with stable barcodes, random unique allocations, no date assignment, reset non-reuse, full-school Hold and stale-revision protection, full-field bulk add, rollback on invalid/duplicate rows, permissions and retry safety, plus prior rewards tests.
+Local browser suite: centered global Shift navigation, scanner behavior, phone search with IDs, full profile details, bulk-add UI, fresh section entry, class-sheet choices, school Hold, exports and reset flow. No live database reset or GitHub deployment was performed.

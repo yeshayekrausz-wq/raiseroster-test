@@ -14,7 +14,7 @@ export function initRoster(db,org){
   if(currentClass&&classes.some(c=>c.id===currentClass))openClass(currentClass);else $('classPanel').hidden=true;
   $('allStudents').innerHTML=studentButtons(students);bindStudents($('allStudents'));search();
  }
- function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small dir="ltr">${totals[s.id]===undefined?'—':esc(totals[s.id])} pts</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
+ function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small dir="ltr">#${esc(s.short_id||'')} · ${esc([s.phone,s.home_phone,s.father_phone,s.mother_phone,s.other_phone].filter(Boolean).map(phone).join(' / '))}</small><small dir="ltr">${totals[s.id]===undefined?'—':esc(totals[s.id])} pts</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
  function bindStudents(parent){parent.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>openStudent(b.dataset.student));}
  function openClass(id){currentClass=id;$('rosterContent').classList.add('classFocused');$('allStudentsPanel').hidden=true;$('classTitle').textContent=classes.find(c=>c.id===id)?.name||'';$('classStudents').innerHTML=studentButtons(group(id))||'<p>No students in this class.</p>';bindStudents($('classStudents'));$('classPanel').hidden=false;$('classPanel').scrollIntoView({block:'start',behavior:'smooth'});}
  function clearSearch(){$('studentSearch').value='';$('searchResults').hidden=true;$('studentSearch').setAttribute('aria-expanded','false');$('studentSearch').removeAttribute('aria-activedescendant');results=[];searchIndex=-1;}
@@ -22,6 +22,7 @@ export function initRoster(db,org){
   const s=students.find(s=>s.id===id);if(!s)return;currentStudent=s;
   $('profileName').textContent=s.name+ (s.short_id?' · #'+s.short_id:'');$('profileClass').textContent=classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'Unassigned';
   $('profilePhones').innerHTML=[['Main phone',s.phone],['Home',s.home_phone],['Father',s.father_phone],['Mother',s.mother_phone],['Additional',s.other_phone]].filter(([,n])=>n).map(([label,n])=>`<p>${label}: <span dir="ltr">${esc(phone(n))}</span></p>`).join('')||'<p>No phone numbers saved.</p>';
+  $('profilePhones').insertAdjacentHTML('beforeend',[['Address',s.address],['Birth date',s.gregorian_birthday],['Hebrew birthday',s.hebrew_birthday],['Notes',s.notes]].filter(([,v])=>v).map(([label,value])=>`<p><strong>${label}:</strong> <span dir="auto" class="profileDetail">${esc(value)}</span></p>`).join(''));
   $('campaignProfileLink').href='../../admin/?org='+encodeURIComponent(org)+'&hub=1';clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();onProfile(s,true);
  }
  function search(){
@@ -50,16 +51,17 @@ export function initRoster(db,org){
   finally{loading=false;$('refreshRoster').disabled=false;}
  }
  $('refreshRoster').onclick=refresh;$('closeClass').onclick=()=>{$('rosterContent').classList.remove('classFocused');$('classPanel').hidden=true;$('allStudentsPanel').hidden=false;currentClass=null;};
- function finish(commit){const choice=nav;nav=null;$('profileNavigator').hidden=true;if(commit&&choice&&choice.id!==currentStudent?.id)openStudent(choice.id);}
+ const navigator=$('profileNavigator');navigator.setAttribute('popover','manual');document.body.append(navigator);
+ function finish(commit){const choice=nav;nav=null;if(navigator.matches(':popover-open'))navigator.hidePopover();$('profileNavigator').hidden=true;if(commit&&choice&&(choice.id!==currentStudent?.id||!$('studentProfile').open))openStudent(choice.id);}
  function closeProfile(){finish(false);$('studentProfile').close();currentStudent=null;$('studentSearch').focus();}
  $('closeProfile').onclick=closeProfile;
  $('studentProfile').addEventListener('cancel',e=>{e.preventDefault();if(nav){finish(false);suppressed=true;}else closeProfile();});
  function drawNav(){const rows=group(nav.class_id);$('navClass').textContent=classes.find(c=>c.id===nav.class_id)?.name||'';
-  $('navStudents').innerHTML=rows.map((s,i)=>`<div id="nav-student-${i}" class="nav-row ${s.id===nav.id?'selected':''}" role="option" aria-selected="${s.id===nav.id}"><span>${i+1}</span><span dir="auto">${esc(s.name)}</span></div>`).join('');const selected=$('navStudents').querySelector('.selected');if(selected){$('navStudents').setAttribute('aria-activedescendant',selected.id);selected.scrollIntoView({block:'nearest'});}}
- function begin(){if(nav||suppressed||!currentStudent||!$('studentProfile').open)return;nav={id:currentStudent.id,class_id:currentStudent.class_id||'unassigned'};$('profileNavigator').hidden=false;drawNav();}
+  $('navStudents').innerHTML=rows.map((s,i)=>`<div id="nav-student-${i}" class="nav-row ${s.id===nav.id?'selected':''}" role="option" aria-selected="${s.id===nav.id}"><span>#${esc(s.short_id||'')}</span><span dir="auto">${esc(s.name)}</span></div>`).join('');const selected=$('navStudents').querySelector('.selected');if(selected){$('navStudents').setAttribute('aria-activedescendant',selected.id);selected.scrollIntoView({block:'nearest'});}}
+ function begin(){if(nav||suppressed||!students.length)return;const pupil=currentStudent||group(currentClass)[0]||students[0];nav={id:pupil.id,class_id:pupil.class_id||'unassigned'};$('profileNavigator').hidden=false;navigator.showPopover();drawNav();}
  document.addEventListener('keydown',e=>{
   if(e.altKey&&e.key==='1'&&!adding&&!$('addStudentDialog').open&&!$('rosterView').hidden){e.preventDefault();if($('studentProfile').open)closeProfile();$('studentSearch').focus();return;}
-  if(!$('studentProfile').open||$('taskDialog')?.open||document.getElementById('classWarning')?.open)return;
+  if([...document.querySelectorAll('dialog[open]')].some(d=>d.id!=='studentProfile'))return;
   if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing){finish(false);if(e.shiftKey)suppressed=true;return;}
   if(e.key==='Shift'){begin();return;}
   if(e.key==='Escape'&&nav){e.preventDefault();e.stopImmediatePropagation();finish(false);suppressed=true;return;}
@@ -72,6 +74,7 @@ export function initRoster(db,org){
  document.addEventListener('keyup',e=>{if(e.key==='Shift'&&!e.shiftKey){finish(true);suppressed=false;}},true);
  const cancelNav=()=>{finish(false);suppressed=false;};window.addEventListener('blur',cancelNav);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelNav();});
  $('profileNavigator').onpointerdown=e=>e.preventDefault();
+ window.addEventListener('motivation-section-enter',e=>{if(e.detail==='dashboard'){$('closeClass').click();clearSearch();}});
  function addDirty(){return $('newStudentName').value.trim()||$('newStudentPhone').value.trim();}
  function closeAdd(){if(adding)return;if(addDirty()&&!confirm('Discard the new student details?'))return;$('addStudentDialog').close();}
  $('classAddStudent').onclick=()=>{$('showAddStudent').click();};

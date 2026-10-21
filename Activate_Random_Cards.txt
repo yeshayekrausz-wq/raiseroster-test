@@ -1,0 +1,127 @@
+-- Requires the previous MOTIVATION_REWARDS_READY activation.
+BEGIN;
+CREATE TABLE IF NOT EXISTS public.rr_reward_used_codes(organization_id uuid NOT NULL REFERENCES public.organizations(id),code text NOT NULL CHECK(code ~ '^[0-9]{6}$'),PRIMARY KEY(organization_id,code));
+ALTER TABLE public.rr_reward_used_codes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.rr_reward_used_codes FROM PUBLIC,anon,authenticated;
+INSERT INTO public.rr_reward_used_codes SELECT organization_id,code FROM public.rr_motivation_cards WHERE code ~ '^[0-9]{6}$' ON CONFLICT DO NOTHING;
+CREATE OR REPLACE FUNCTION public.rr_reward_random_code(p_org uuid) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE n bigint;candidate text;attempt int;BEGIN
+ PERFORM 1 FROM public.organizations WHERE id=p_org FOR UPDATE;
+ FOR attempt IN 1..10000 LOOP
+  n:=('x'||substr(replace(gen_random_uuid()::text,'-',''),1,8))::bit(32)::bigint;
+  IF n>=4294800000 THEN CONTINUE;END IF;
+  candidate:=(100000+n%900000)::text;
+  INSERT INTO public.rr_reward_used_codes VALUES(p_org,candidate) ON CONFLICT DO NOTHING;
+  IF FOUND THEN RETURN candidate;END IF;
+ END LOOP;
+ IF (SELECT count(*) FROM public.rr_reward_used_codes WHERE organization_id=p_org)>=900000 THEN RAISE EXCEPTION 'Six-digit card code range exhausted' USING ERRCODE='22023';END IF;
+ RAISE EXCEPTION 'Could not allocate a fresh card code. Retry.' USING ERRCODE='40001';
+END $$;
+REVOKE ALL ON FUNCTION public.rr_reward_random_code(uuid) FROM PUBLIC,anon,authenticated;
+CREATE OR REPLACE FUNCTION public.rr_reward_assign_code() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN NEW.code:=public.rr_reward_random_code(NEW.organization_id);RETURN NEW;END $$;
+-- Reprint reward cards after upgrading: old five-digit manual codes stop working.
+UPDATE public.rr_motivation_cards SET code=public.rr_reward_random_code(organization_id) WHERE code !~ '^[0-9]{6}$';
+CREATE OR REPLACE FUNCTION public.rr_motivation_order_plan(p_org uuid,p_program uuid,p_data jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE cls uuid;student_count int;full_count int;morning_count int;afternoon_count int;unknown_count int;total_each int;am int;pm int;rows jsonb:='[]';row jsonb;teacher record;amount int;grand_total int:=0;start_day date;end_day date;points numeric;zone text;settings jsonb;members jsonb;result jsonb;epoch bigint;distribution jsonb;
+BEGIN
+ PERFORM public.rr_motivation_require_access(p_org);
+ SELECT coalesce((SELECT c.epoch FROM public.rr_reward_control c WHERE organization_id=p_org),0) INTO epoch;
+ IF (p_data->>'epoch')::bigint IS DISTINCT FROM epoch THEN RAISE EXCEPTION 'Test data was reset. Reload before creating cards.' USING ERRCODE='40001';END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.rr_motivation_programs WHERE organization_id=p_org AND id=p_program) THEN RAISE EXCEPTION 'Choose a school program' USING ERRCODE='42501';END IF;
+ IF jsonb_typeof(p_data) IS DISTINCT FROM 'object' OR jsonb_typeof(p_data->'classes') IS DISTINCT FROM 'array' OR jsonb_array_length(p_data->'classes') NOT BETWEEN 1 AND 100 THEN RAISE EXCEPTION 'Choose classes' USING ERRCODE='22023';END IF;
+ IF (SELECT count(*) FROM jsonb_array_elements_text(p_data->'classes'))<>(SELECT count(DISTINCT value) FROM jsonb_array_elements_text(p_data->'classes')) THEN RAISE EXCEPTION 'Duplicate class' USING ERRCODE='22023';END IF;
+ IF coalesce(p_data->>'from','') !~ '^\d{4}-\d{2}-\d{2}$' OR coalesce(p_data->>'through','') !~ '^\d{4}-\d{2}-\d{2}$' THEN RAISE EXCEPTION 'Choose valid from and through dates' USING ERRCODE='22023';END IF;
+ start_day:=(p_data->>'from')::date;end_day:=(p_data->>'through')::date;
+ IF end_day<start_day OR end_day-start_day>366 THEN RAISE EXCEPTION 'Choose an ordered date range of at most 367 days' USING ERRCODE='22023';END IF;
+ IF coalesce(p_data->>'each','') !~ '^[0-9]+$' OR coalesce(p_data->>'points','') !~ '^[0-9]+(\.[0-9]+)?$' THEN RAISE EXCEPTION 'Enter cards per child and points per card' USING ERRCODE='22023';END IF;
+ total_each:=(p_data->>'each')::int;points:=(p_data->>'points')::numeric;
+ IF total_each NOT BETWEEN 1 AND 1000 OR points NOT BETWEEN 0 AND 1000000 THEN RAISE EXCEPTION 'Card count or points outside supported range' USING ERRCODE='22023';END IF;
+ SELECT coalesce((SELECT o.settings FROM public.rr_motivation_options o WHERE organization_id=p_org),public.rr_motivation_defaults()) INTO settings;zone:=settings->>'timezone';
+ IF NOT coalesce((settings->>'cards_enabled')::boolean,false) THEN RAISE EXCEPTION 'Enable cards in Program Settings first' USING ERRCODE='22023';END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=zone) THEN RAISE EXCEPTION 'Set the school timezone first' USING ERRCODE='22023';END IF;
+ FOR cls IN SELECT value::uuid FROM jsonb_array_elements_text(p_data->'classes') LOOP
+  IF NOT EXISTS(SELECT 1 FROM public.classes c JOIN public.school_years y ON y.id=c.school_year_id AND y.is_current WHERE c.id=cls AND c.organization_id=p_org AND c.is_active) THEN RAISE EXCEPTION 'Choose current classes from this school' USING ERRCODE='42501';END IF;
+  SELECT count(*),coalesce(jsonb_agg(s.id ORDER BY s.id),'[]') INTO student_count,members FROM public.students s JOIN public.student_class_assignments a ON a.student_id=s.id AND a.organization_id=p_org AND a.is_current WHERE s.organization_id=p_org AND NOT s.is_archived AND a.class_id=cls;
+  IF student_count=0 THEN RAISE EXCEPTION 'A selected class has no active students' USING ERRCODE='22023';END IF;
+  SELECT count(*) FILTER(WHERE session='full'),count(*) FILTER(WHERE session='morning'),count(*) FILTER(WHERE session='afternoon'),count(*) FILTER(WHERE session IS NULL) INTO full_count,morning_count,afternoon_count,unknown_count FROM public.rr_teacher_portals WHERE organization_id=p_org AND class_id=cls AND enabled;
+  IF unknown_count>0 OR NOT ((full_count=1 AND morning_count=0 AND afternoon_count=0) OR (full_count=0 AND morning_count=1 AND afternoon_count=1)) THEN RAISE EXCEPTION 'Each class needs one full-day teacher OR one morning and one afternoon teacher. Check Teacher Portals.' USING ERRCODE='22023';END IF;
+  IF true THEN
+   IF coalesce(p_data->>'morning','') !~ '^[0-9]+$' OR coalesce(p_data->>'afternoon','') !~ '^[0-9]+$' THEN RAISE EXCEPTION 'Enter both session allocations for split classes' USING ERRCODE='22023';END IF;
+   am:=(p_data->>'morning')::int;pm:=(p_data->>'afternoon')::int;
+   IF am<0 OR pm<0 OR am+pm<>total_each THEN RAISE EXCEPTION 'Morning plus afternoon must equal cards per child' USING ERRCODE='22023';END IF;
+  END IF;
+  distribution:=public.rr_reward_distribution(student_count*total_each,p_data->'distribution',p_data->>'rounding');
+  FOR teacher IN SELECT t.id,t.name,t.revision,s.session FROM public.rr_teacher_portals t CROSS JOIN (VALUES('morning'),('afternoon')) s(session) WHERE t.organization_id=p_org AND t.class_id=cls AND t.enabled AND (t.session='full' OR t.session=s.session) ORDER BY s.session,t.id LOOP
+   amount:=CASE teacher.session WHEN 'morning' THEN am ELSE pm END;
+   row:=jsonb_build_object('teacher_id',teacher.id,'teacher',teacher.name,'revision',teacher.revision,'session',teacher.session,'class_id',cls,'class_name',(SELECT name FROM public.classes WHERE id=cls),'students',student_count,'members',members,'each',amount,'count',amount*student_count,'distribution',distribution);
+   rows:=rows||jsonb_build_array(row);grand_total:=grand_total+amount*student_count;
+  END LOOP;
+ END LOOP;
+ IF grand_total>20000 THEN RAISE EXCEPTION 'An order may contain at most 20,000 cards. Choose fewer classes or cards.' USING ERRCODE='22023';END IF;
+ result:=jsonb_build_object('rows',rows,'total',grand_total,'timezone',zone,'from',start_day,'through',end_day,'points',points,'epoch',epoch,'rounding',p_data->>'rounding');
+ RETURN result||jsonb_build_object('token',md5(result::text));
+END $$;
+CREATE OR REPLACE FUNCTION public.rr_motivation_order_create(p_org uuid,p_program uuid,p_request uuid,p_data jsonb,p_token text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE plan jsonb;old public.rr_motivation_orders%ROWTYPE;row jsonb;batch uuid;order_id uuid;batches jsonb:='[]';payload jsonb;period uuid;cls text;pool numeric[];at_index int;days date[];i int;dist jsonb;
+BEGIN
+ PERFORM public.rr_motivation_require_access(p_org);IF p_request IS NULL THEN RAISE EXCEPTION 'Missing request' USING ERRCODE='22023';END IF;
+ PERFORM 1 FROM public.organizations WHERE id=p_org FOR UPDATE;payload:=jsonb_build_object('program',p_program,'data',p_data,'token',p_token);
+ SELECT * INTO old FROM public.rr_motivation_orders WHERE organization_id=p_org AND request_id=p_request;
+ IF FOUND THEN IF old.payload<>payload THEN RAISE EXCEPTION 'Request already used' USING ERRCODE='22023';END IF;RETURN jsonb_build_object('id',old.id,'total',old.plan->'total');END IF;
+ plan:=public.rr_motivation_order_plan(p_org,p_program,p_data);
+ IF p_token IS DISTINCT FROM plan->>'token' THEN RAISE EXCEPTION 'Roster or teacher assignments changed. Preview again.' USING ERRCODE='40001';END IF;
+ INSERT INTO public.rr_reward_periods(organization_id,program_id,starts,ends) VALUES(p_org,p_program,(plan->>'from')::date,(plan->>'through')::date) ON CONFLICT(organization_id,program_id,starts,ends) DO UPDATE SET starts=excluded.starts RETURNING id INTO period;
+ FOR cls IN SELECT DISTINCT value->>'class_id' FROM jsonb_array_elements(plan->'rows') LOOP
+  SELECT value->'distribution' INTO dist FROM jsonb_array_elements(plan->'rows') WHERE value->>'class_id'=cls LIMIT 1;
+  SELECT array_agg(points ORDER BY random()) INTO pool FROM (SELECT (d.value->>'points')::numeric points FROM jsonb_array_elements(dist) d CROSS JOIN LATERAL generate_series(1,(d.value->>'count')::int)) entries;at_index:=1;
+  FOR row IN SELECT value FROM jsonb_array_elements(plan->'rows') WHERE value->>'class_id'=cls LOOP
+   IF (row->>'count')::int=0 THEN CONTINUE;END IF;batch:=gen_random_uuid();
+   FOR i IN 1..(row->>'count')::int LOOP
+    INSERT INTO public.rr_motivation_cards(organization_id,program_id,class_id,points,teacher,batch_id,valid_from_date,valid_through_date,period_id,session,card_day)
+    VALUES(p_org,p_program,cls::uuid,pool[at_index],row->>'teacher',batch,(plan->>'from')::date,(plan->>'through')::date,period,row->>'session',NULL);at_index:=at_index+1;
+   END LOOP;
+   batches:=batches||jsonb_build_array(row-'members'||jsonb_build_object('batch_id',batch));
+  END LOOP;
+ END LOOP;
+ INSERT INTO public.rr_motivation_orders(organization_id,program_id,request_id,payload,plan,batches) VALUES(p_org,p_program,p_request,payload,plan||jsonb_build_object('period_id',period),batches) RETURNING id INTO order_id;
+ INSERT INTO public.rr_motivation_events(organization_id,program_id,actor_id,kind,detail) VALUES(p_org,p_program,auth.uid(),'cards_generated',jsonb_build_object('order',order_id,'plan',plan-'rows','batches',batches));
+ RETURN jsonb_build_object('id',order_id,'total',plan->'total');
+END $$;
+CREATE OR REPLACE FUNCTION public.rr_reward_hold_school(p_org uuid,p_period uuid,p_revision bigint) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE rev bigint;p uuid;BEGIN
+ PERFORM public.rr_motivation_require_access(p_org);PERFORM 1 FROM public.organizations WHERE id=p_org FOR UPDATE;
+ SELECT revision INTO rev FROM public.rr_reward_periods WHERE id=p_period AND organization_id=p_org;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Choose a week in this school' USING ERRCODE='42501';END IF;
+ IF p_revision IS DISTINCT FROM rev THEN RAISE EXCEPTION 'Week changed. Reload before holding the school.' USING ERRCODE='40001';END IF;
+ DELETE FROM public.rr_reward_authorizations WHERE period_id=p_period;
+ INSERT INTO public.rr_reward_eligibility(period_id,student_id,choice) SELECT p_period,id,'none' FROM public.students WHERE organization_id=p_org ON CONFLICT(period_id,student_id) DO UPDATE SET choice='none';
+ FOR p IN SELECT DISTINCT student_id FROM public.rr_reward_redemptions WHERE period_id=p_period LOOP PERFORM public.rr_reward_recalculate(p_period,p);END LOOP;
+ UPDATE public.rr_reward_periods SET revision=revision+1 WHERE id=p_period;
+ INSERT INTO public.rr_motivation_events(organization_id,program_id,actor_id,kind,detail) VALUES(p_org,(SELECT program_id FROM public.rr_reward_periods WHERE id=p_period),auth.uid(),'school_hold',jsonb_build_object('period',p_period));
+ RETURN jsonb_build_object('saved',true);
+END $$;
+CREATE TABLE IF NOT EXISTS public.rr_student_bulk_requests(organization_id uuid NOT NULL REFERENCES public.organizations(id),request_id uuid NOT NULL,payload jsonb NOT NULL,result jsonb NOT NULL,PRIMARY KEY(organization_id,request_id));
+ALTER TABLE public.rr_student_bulk_requests ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.rr_student_bulk_requests FROM PUBLIC,anon,authenticated;
+CREATE OR REPLACE FUNCTION public.rr_students_bulk_add(p_org uuid,p_request uuid,p_rows jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE old jsonb;result jsonb;r jsonb;created jsonb;sid uuid;snapshot jsonb;changes jsonb:='[]';ids jsonb:='[]';BEGIN
+ PERFORM public.rr_motivation_require_access(p_org);PERFORM 1 FROM public.organizations WHERE id=p_org FOR UPDATE;
+ IF p_request IS NULL OR jsonb_typeof(p_rows) IS DISTINCT FROM 'array' OR jsonb_array_length(p_rows) NOT BETWEEN 1 AND 200 THEN RAISE EXCEPTION 'Enter 1 to 200 students' USING ERRCODE='22023';END IF;
+ SELECT payload,b.result INTO old,result FROM public.rr_student_bulk_requests b WHERE organization_id=p_org AND request_id=p_request;
+ IF FOUND THEN IF old IS DISTINCT FROM p_rows THEN RAISE EXCEPTION 'Request already used' USING ERRCODE='22023';END IF;RETURN result;END IF;
+ FOR r IN SELECT value FROM jsonb_array_elements(p_rows) LOOP
+ created:=public.rr_motivation_add_student(p_org,(r->>'class_id')::uuid,r->>'name',r->>'phone',gen_random_uuid());sid:=(created->>'student_id')::uuid;
+ snapshot:=public.rr_motivation_student_snapshot(sid);
+ changes:=changes||jsonb_build_array(snapshot||r||jsonb_build_object('id',sid,'before',snapshot));ids:=ids||jsonb_build_array(sid);
+ END LOOP;
+ PERFORM public.rr_motivation_command_v5(p_org,gen_random_uuid(),'profiles',jsonb_build_object('rows',changes));
+ PERFORM public.rr_motivation_roster_v5(p_org);
+ result:=jsonb_build_object('students',ids,'count',jsonb_array_length(ids));
+ INSERT INTO public.rr_student_bulk_requests VALUES(p_org,p_request,p_rows,result);RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION public.rr_reward_hold_school(uuid,uuid,bigint),public.rr_students_bulk_add(uuid,uuid,jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.rr_reward_hold_school(uuid,uuid,bigint),public.rr_students_bulk_add(uuid,uuid,jsonb) TO authenticated;
+NOTIFY pgrst,'reload schema';
+COMMIT;
+SELECT 'MOTIVATION_RANDOM_CODES_READY' AS result;

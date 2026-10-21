@@ -1,3 +1,4 @@
+import {initBulkAdd} from './bulk-add.js';
 import {initEligibility} from './eligibility.js';
 import {initOrders} from './orders.js';
 import {initCardPolicy} from './policy.js';
@@ -72,7 +73,7 @@ export function initWorkspace(db,org,roster){
  }
  $('scanForm').onsubmit=e=>{e.preventDefault();if(openIDCard($('scanCode').value.trim())){$('scanCode').value='';return;}if(scanRequest){$('scanCode').value=scanRequest.data.code;redeem(scanRequest.data.code,scanRequest.override);}else redeem($('scanCode').value);};
  function openIDCard(code){if(!/^1[0-9]{11}$/.test(code))return false;
-  if(scanBusy||scanRequest||taskBusy||warning.open||$('unfreezeDialog')?.open){message('Finish the current card or edit before switching students.');return true;}
+  if(scanBusy||scanRequest||taskBusy||warning.open||$('unfreezeDialog')?.open||$('bulkAddDialog')?.open){message('Finish the current card or edit before switching students.');return true;}
   const student=roster.getStudents().find(s=>String(s.barcode)===code);if(!student){message('Student not found. Refresh students.');return true;}
   if($('taskDialog').open){closeTask();if($('taskDialog').open)return true;}
   if($('addStudentDialog').open){$('cancelAdd').click();if($('addStudentDialog').open)return true;}
@@ -133,6 +134,7 @@ export function initWorkspace(db,org,roster){
  }
  $('cardBatch').onchange=renderCards;
  orderUI=initOrders({rpc,org,roster,program:()=>active,onCards:(cards,batches)=>{orderCards=cards;orderBatches=batches;documents();}});
+ initBulkAdd({rpc,org,roster});
  const eligibilityUI=initEligibility({rpc,org,roster,program:()=>active,refresh});
  $('studentUnfreeze').onclick=perform(()=>{requireProgram();eligibilityUI.open(current.id);});
  $('printCards').onclick=perform(()=>printDesigned('rewards'));
@@ -196,6 +198,8 @@ export function initWorkspace(db,org,roster){
  $('exportWord').onclick=perform(()=>download('cards.docx',wordCards(cardData($('exportType').value),cardData($('exportType').value).map(c=>barcodePNG(c.code))),'application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
  $('exportExcel').onclick=perform(()=>{const cards=cardData($('exportType').value);if(!cards.length)throw Error('No cards selected.');const headers=Object.keys(cards[0].merge);download('cards.xlsx',excelCards([[...headers,'BarcodeImage'],...cards.map(c=>[...headers.map(k=>c.merge[k]),''])],cards.map(c=>barcodePNG(c.code))),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');});
  $('sidebarToggle').onclick=()=>{const compact=document.body.classList.toggle('sidebarCompact');$('sidebarToggle').textContent=compact?'›':'‹';$('sidebarToggle').setAttribute('aria-expanded',String(!compact));};
+ window.addEventListener('motivation-section-leave',e=>{if(settingsDirty&&['settings','display','phone'].includes(e.detail.from)){if(!confirm('Discard unsaved settings?'))e.preventDefault();else{settingsDirty=false;settingsUI();}}});
+ window.addEventListener('motivation-section-enter',e=>{if(e.detail==='reports'){for(const id of ['logStudent','logClass','logKind','logOutcome','logFrom','logTo','logSearch'])$(id).value='';logs=[];$('logTable').replaceChildren();$('logStatus').textContent='';$('moreLogs').hidden=true;}});
  window.addEventListener('beforeunload',e=>{if(settingsDirty||clockDirty||clockBusy||taskDirty||taskBusy||scanBusy||scanRequest){e.preventDefault();e.returnValue='';}});
  loadPrograms().then(()=>{if(state)return rpc('rr_motivation_command_v5',{p_org:org,p_request:crypto.randomUUID(),p_action:'workspace_open',p_data:{source:'admin_workspace'}});}).catch(e=>message(e.message));
 }
