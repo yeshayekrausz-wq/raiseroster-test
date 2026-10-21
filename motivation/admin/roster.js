@@ -4,7 +4,7 @@ const lastName=s=>{const p=s.trim().split(/\s+/);return (p.pop()||'')+' '+p.join
 const digits=s=>String(s||'').replace(/\D/g,'');
 const phone=s=>{const n=digits(s);return n.length===10?`(${n.slice(0,3)}) ${n.slice(3,6)}-${n.slice(6)}`:n;};
 export function initRoster(db,org){
- let students=[],classes=[],currentClass=null,currentStudent=null,results=[],searchIndex=-1,nav=null,suppressed=false,adding=false,loading=false,request=null,totals={},onProfile=()=>{},onLoaded=()=>{};
+ let students=[],classes=[],currentClass=null,currentStudent=null,results=[],searchIndex=-1,nav=null,suppressed=false,adding=false,loading=false,request=null,totals={},heldTotals={},onProfile=()=>{},onLoaded=()=>{};
  const group=id=>students.filter(s=>(s.class_id||'unassigned')===id);
  const status=(text,error=false)=>{$('rosterStatus').textContent=text;$('rosterStatus').className=error?'error':'';};
  function render(){
@@ -14,7 +14,7 @@ export function initRoster(db,org){
   if(currentClass&&classes.some(c=>c.id===currentClass))openClass(currentClass);else $('classPanel').hidden=true;
   $('allStudents').innerHTML=studentButtons(students);bindStudents($('allStudents'));search();
  }
- function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small dir="ltr">#${esc(s.short_id||'')} · ${esc([s.phone,s.home_phone,s.father_phone,s.mother_phone,s.other_phone].filter(Boolean).map(phone).join(' / '))}</small><small dir="ltr">${totals[s.id]===undefined?'—':esc(totals[s.id])} pts</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
+ function studentButtons(rows){return rows.map(s=>`<button class="studentrow" data-student="${esc(s.id)}"><span dir="auto">${esc(s.name)}</span><small dir="ltr">#${esc(s.short_id||'')} · ${esc([s.phone,s.home_phone,s.father_phone,s.mother_phone,s.other_phone].filter(Boolean).map(phone).join(' / '))}</small><small dir="ltr">${totals[s.id]===undefined?'—':esc(totals[s.id])} approved · ${esc(heldTotals[s.id]||0)} on Hold</small><small dir="auto">${esc(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'')}</small></button>`).join('');}
  function bindStudents(parent){parent.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>openStudent(b.dataset.student));}
  function openClass(id){currentClass=id;$('rosterContent').classList.add('classFocused');$('allStudentsPanel').hidden=true;$('classTitle').textContent=classes.find(c=>c.id===id)?.name||'';$('classStudents').innerHTML=studentButtons(group(id))||'<p>No students in this class.</p>';bindStudents($('classStudents'));$('classPanel').hidden=false;$('classPanel').scrollIntoView({block:'start',behavior:'smooth'});}
  function clearSearch(){$('studentSearch').value='';$('searchResults').hidden=true;$('studentSearch').setAttribute('aria-expanded','false');$('studentSearch').removeAttribute('aria-activedescendant');results=[];searchIndex=-1;}
@@ -98,5 +98,5 @@ export function initRoster(db,org){
  };
  window.addEventListener('beforeunload',e=>{if(adding||($('addStudentDialog').open&&addDirty())){e.preventDefault();e.returnValue='';}});
  refresh();
- return {refresh,getStudents:()=>students,getClasses:()=>classes,getCurrent:()=>currentStudent,getClass:()=>currentClass,openStudent,setTotals(value){totals=value;render();if(currentStudent)onProfile(currentStudent);},onProfile(fn){onProfile=fn;},onLoaded(fn){onLoaded=fn;}};
+ return {refresh,getStudents:()=>students,getClasses:()=>classes,getCurrent:()=>currentStudent,getClass:()=>currentClass,openStudent,setTotals(value,held={}){totals=value;heldTotals=held;$('schoolPointSummary').textContent=Object.values(value).reduce((a,b)=>a+Number(b),0)+' approved · '+Object.values(held).reduce((a,b)=>a+Number(b),0)+' on Hold';render();if(currentStudent)onProfile(currentStudent);},onProfile(fn){onProfile=fn;},onLoaded(fn){onLoaded=fn;}};
 }

@@ -4,6 +4,8 @@ import {initRoster} from './roster.js';
 import {SUPABASE_URL,SUPABASE_KEY} from '../../shared/config.js';
 import {resolveMembership} from '../../shared/membership.js';
 const $=id=>document.getElementById(id);
+let authBlocked=false,authUser=null;
+function lockAuth(message){authBlocked=true;document.body.setAttribute('data-auth-locked','');for(const d of document.querySelectorAll('dialog[open]'))d.close();for(const el of document.querySelectorAll('[popover]')){if(el.matches(':popover-open'))el.hidePopover();}$('authGateMessage').textContent=message;}
 let db,org,programs=[],selected=null,dirty=false,busy=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function status(text,error=false){$('status').textContent=text;$('status').className=error?'error':'';}
@@ -72,16 +74,21 @@ $('editor').onsubmit=async e=>{
 };
 window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});
 document.querySelectorAll('header a, .adminSidebar a[href="../../#home"]').forEach(a=>a.addEventListener('click',e=>{if(!mayLeave())e.preventDefault();}));
+window.addEventListener('keydown',e=>{if(document.body.hasAttribute('data-auth-locked')){e.stopImmediatePropagation();}},true);
+window.addEventListener('pagehide',()=>document.body.setAttribute('data-auth-locked',''));
+window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
 initNavigation();
 try{
  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');db=createClient(SUPABASE_URL,SUPABASE_KEY);
  const {data,error}=await db.auth.getSession();if(error)throw error;
- if(!data.session){location.replace('../../#motivation');}else{
+ db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||(authUser&&session?.user?.id!==authUser))lockAuth('Your session ended. Sign in again to continue.');});
+ if(!data.session){lockAuth('Please sign in to continue.');location.replace('../../#motivation');}else{
+ const verified=await db.auth.getUser();if(verified.error||!verified.data?.user)throw Error('Sign-in could not be verified. Please sign in again.');authUser=verified.data.user.id;if(authUser!==data.session.user.id)throw Error('Session changed. Reload and sign in again.');
  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
  if(!member||!['admin','super_admin'].includes(member.role))throw Error('This workspace requires a school administrator account.');
- org=member.organization_id;const roster=initRoster(db,org);await load();initWorkspace(db,org,roster);window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');
+ org=member.organization_id;await load();if(authBlocked)throw Error('Session ended. Please sign in again.');const roster=initRoster(db,org);initWorkspace(db,org,roster);window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');if(!authBlocked)document.body.removeAttribute('data-auth-locked');
  }
-}catch(e){$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
+}catch(e){lockAuth(e.message||'Access could not be verified. Reload or sign in again.');$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
 
 let currentRoute='',currentHash=location.hash||'#dashboard';
 function route(){

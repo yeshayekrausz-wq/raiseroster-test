@@ -1,25 +1,19 @@
-YK Connect — Class sheet, Unfreeze and student profile update
+YK Connect — Hold overview, Documents navigation and sign-in gate
 
 INSTALL
-Requires the previous Random Cards update.
-1. Open Activate_Class_Unfreeze.txt in a text editor and run the complete SQL in Supabase SQL Editor. Expected result: MOTIVATION_CLASS_UNFREEZE_READY.
-2. Extract the ZIP and upload motivation/ and sw.js to the repository root, preserving the folder structure. Commit changes.
-3. After deployment, reopen the website; Ctrl+Shift+R if needed.
-Do not paste HTML or the ZIP into SQL Editor. This installer does not change any card codes and does not reset data.
+Requires the earlier Class Unfreeze and Random Cards updates.
+1. Run Activate_Hold_Overview.txt in Supabase SQL Editor. Expected: MOTIVATION_HOLD_OVERVIEW_READY.
+2. Extract this ZIP. Upload motivation/ and sw.js at the repository root, preserving folder paths. Commit changes.
+3. After Pages deployment, close old tabs and reopen. Use Ctrl+Shift+R if required.
+No card code changes or reset are performed. No card reprint is needed.
 
 CHANGES
-• Eligibility is one vertical class sheet, one pupil per row, with compact ALL / morning / afternoon checkboxes. Thirty pupils fit in the tested 1440×1000 desktop viewport; smaller displays may require scrolling.
-• Unfreeze class: choose a week and class, then confirm. Releases both sessions to 100% for current members of that class.
-• Unfreeze school: choose a week, then confirm. Releases both sessions to 100% across the school for that week's Motivation program.
-• Both actions replace individual restrictions and partial releases within that selected week. Already redeemed card points are recalculated without adding duplicate ledger entries, and future redemptions follow the new eligibility. Other weeks/programs and manual/exam points are unchanged. These actions do not delete cards.
-• Student details now appear directly below the name. Active class teachers appear as מלמד {name}, with morning/afternoon labels where applicable.
-• The old Student details side box is reserved for the student's picture. The shortcut instructions and Open Campaign Admin link are removed from the profile. The address is hidden from this profile view; its saved database value and Edit Profile field remain. Other saved details and file attachments appear under the name.
-• Student IDs, reward codes and barcodes are unchanged. No card reprint is required for this update.
+Eligibility: choose an accounting week to see class summaries with pupils on Hold, partly authorized and fully authorized. Open a class for its vertical sheet, approved points, held points and status. Names are sorted by the final word of the saved name (family-name convention used by the existing roster). Row numbers are on the right.
+Hold amounts count already redeemed/scanned card points that have not been authorized. Unredeemed cards have no assigned pupil and are not included in pupil totals. Eligibility status describes the permissions for that pupil's class cards in the chosen week, even when they have not redeemed any cards. A normal week can have every pupil on Hold.
+Dashboard/profile: approved and held totals are separate. Dashboard sums cover the selected program and current non-archived roster. Profile totals appear below the name. Admin approved totals include authorized points scheduled for next-day display; the child-facing reveal timing is unchanged. Week-specific Eligibility totals include redeemed reward cards for that week; dashboard totals also include manual/exam points across the program.
+Exam approval remains the existing administrator decision through Eligibility/Unfreeze. This update does not automatically interpret exam results or change approval rules.
+Documents: home choices New cards, Saved orders, Student cards and Layout. New cards has its own route and fresh form, with Documents → New cards breadcrumbs. Saved orders remain available for reprints. Successful generation opens Saved orders. Clicking Documents returns to the home choices.
+Security: the Motivation admin shell is hidden in the original HTML before JavaScript runs. The page verifies the server-side user session, school membership and server-authorized program-list call before opening the shell and initiating roster/workspace loading. Missing, invalid or forbidden sessions stay locked; sign-out locks the page immediately. Backend authorization and RLS remain enforced independently of the visual gate. A valid remembered session can still sign in automatically; no forced password prompt on every visit was added.
+Scope: this patch covers Motivation Admin. It is not a security audit of every other application or the live Supabase configuration.
 
-אינסטאלירן דעם נייעם SQL־טעקסט אין Supabase און אפלאוד די וועב־פיילס אין GitHub.
-אנפריזן א כתה אדער חדר גייט אויף דער אויסגעקליבענער וואך, ביידע סדרים, 100%.
-די כתה־ליסטע איז צוריק איין שטייענדיגע ליסטע. די תלמיד־פרטים און מלמדים שטייען אונטערן נאמען; דער זייטיגער קעסטל איז פארן בילד.
-קיין נייע קארטל־קאודס ווערן נישט באשאפן דורך דעם אפדעיט.
-
-VALIDATION
-Local database tests cover class/school releases, unchanged totals on repeated release, stale revision protection and school/role isolation, alongside previous reward, reset and bulk-add regressions. Browser tests cover both release buttons, thirty-row vertical sheet, profile layout/teacher names, and prior workflows. No live database actions or deployment were performed.
+טעסטן זענען דורכגעפירט לאקאל. קיין לעבעדיגע דאטאבעיס אדער GitHub Pages איז נישט געטוישט געווארן.

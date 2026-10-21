@@ -1,5 +1,5 @@
 // Increment VERSION whenever releasing changes to cached files.
-const VERSION = '1.12.0';
+const VERSION = '1.13.0';
 const CACHE = 'ykonnect-launcher-' + VERSION;
 const BASE = new URL('./', self.location.href);
 const SHELL = ['index.html', 'shared/hub.css', 'shared/hub.js', 'shared/programs.js', 'shared/config.js', 'shared/membership.js', 'install.js', 'manifest.webmanifest', 'favicon2.png', 'icons/icon-192.png', 'icons/icon-512.png', 'offline.html'].map(path => new URL(path, BASE).href);
