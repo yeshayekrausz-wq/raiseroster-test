@@ -1,19 +1,10 @@
-YK Connect — Hold overview, Documents navigation and sign-in gate
+YK Connect — Class sheet and profile layout
 
-INSTALL
-Requires the earlier Class Unfreeze and Random Cards updates.
-1. Run Activate_Hold_Overview.txt in Supabase SQL Editor. Expected: MOTIVATION_HOLD_OVERVIEW_READY.
-2. Extract this ZIP. Upload motivation/ and sw.js at the repository root, preserving folder paths. Commit changes.
-3. After Pages deployment, close old tabs and reopen. Use Ctrl+Shift+R if required.
-No card code changes or reset are performed. No card reprint is needed.
+No SQL is needed. This update assumes the previous Hold Overview update is installed.
+Extract the ZIP, upload motivation/ and sw.js to the GitHub repository root with their existing paths, and commit. After deployment, refresh with Ctrl+Shift+R.
 
-CHANGES
-Eligibility: choose an accounting week to see class summaries with pupils on Hold, partly authorized and fully authorized. Open a class for its vertical sheet, approved points, held points and status. Names are sorted by the final word of the saved name (family-name convention used by the existing roster). Row numbers are on the right.
-Hold amounts count already redeemed/scanned card points that have not been authorized. Unredeemed cards have no assigned pupil and are not included in pupil totals. Eligibility status describes the permissions for that pupil's class cards in the chosen week, even when they have not redeemed any cards. A normal week can have every pupil on Hold.
-Dashboard/profile: approved and held totals are separate. Dashboard sums cover the selected program and current non-archived roster. Profile totals appear below the name. Admin approved totals include authorized points scheduled for next-day display; the child-facing reveal timing is unchanged. Week-specific Eligibility totals include redeemed reward cards for that week; dashboard totals also include manual/exam points across the program.
-Exam approval remains the existing administrator decision through Eligibility/Unfreeze. This update does not automatically interpret exam results or change approval rules.
-Documents: home choices New cards, Saved orders, Student cards and Layout. New cards has its own route and fresh form, with Documents → New cards breadcrumbs. Saved orders remain available for reprints. Successful generation opens Saved orders. Clicking Documents returns to the home choices.
-Security: the Motivation admin shell is hidden in the original HTML before JavaScript runs. The page verifies the server-side user session, school membership and server-authorized program-list call before opening the shell and initiating roster/workspace loading. Missing, invalid or forbidden sessions stay locked; sign-out locks the page immediately. Backend authorization and RLS remain enforced independently of the visual gate. A valid remembered session can still sign in automatically; no forced password prompt on every visit was added.
-Scope: this patch covers Motivation Admin. It is not a security audit of every other application or the live Supabase configuration.
+The class sheet now places selection checkboxes next to names, followed by approved/held amounts and status toward the left. Hover highlights the pupil's row. Changing a checkbox highlights Save changes and shows an additional save bar. Changes are saved through the existing authorized database function.
+Profile details are left-aligned: name/ID, class, phone numbers, address, teachers, then other saved details. Morning teachers precede afternoon teachers. The duplicate top approved/Hold summary is removed; the main points box remains. Pictures remain in their reserved panel.
+No database data or card codes are changed by installing these files.
 
-טעסטן זענען דורכגעפירט לאקאל. קיין לעבעדיגע דאטאבעיס אדער GitHub Pages איז נישט געטוישט געווארן.
+Tested locally in the browser: column ordering, save bar and persistence request, address display, morning/afternoon order, no duplicate summary, and existing flows. Not deployed to the live site.
