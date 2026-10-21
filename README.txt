@@ -1,0 +1,1 @@
+Upload the motivation folder and sw.js to the repository, preserving paths. No SQL required. Reward cards always print their morning/afternoon session, including saved custom layouts. Excel includes SessionLabel. Re-download existing cards to get the label; no need to generate new cards.
