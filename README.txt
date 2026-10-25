@@ -1,11 +1,9 @@
-# Planner guided steps — 1.15.4
+# Planner save navigation fix — 1.15.5
 
-Upload the motivation folder and sw.js to the same paths in GitHub. Do not upload the ZIP itself. Refresh the site with Ctrl+Shift+R after deployment.
+Extract the ZIP. Upload motivation/ and sw.js to the existing GitHub repository paths. No SQL is needed. Refresh after deployment with Ctrl+Shift+R.
 
-Run Activate_Planner_Preview_Speed.txt in Supabase SQL Editor if you have not installed the preview speed update. Expected result: PLANNER_PREVIEW_SPEED_READY. This is the existing preview-only optimization, not a reset. Never paste HTML into SQL Editor.
+After saving a plan, the interface now unlocks before requesting navigation to Documents > Weeks. Previously, the planner's own busy guard rejected that transition when folder loading took long enough for the hashchange event to run. Folder reads now occur only through accepted navigation. Save status no longer displays the obsolete Preview ready message. Failed saves retain entries and the same request identifier for safe retry. Planner validation and caught errors appear in red.
 
-Changes: step validation prevents advancing past incomplete goals, weeks, card quantities, percentages or classes. Changing week-building settings requires rebuilding the week list. Preview must complete before Review. The activity banner scrolls into view and stays visible. Preview waiting stops after 20 seconds, aborts the browser request and preserves entries; this does not guarantee server completion within 20 seconds. A late response cannot replace a subsequent preview. Card generation is separate and reports progress by week.
+If a previous save appeared to disappear, open Documents > Weeks in the same program first; a saved plan may already be there. This update does not recover unsaved entries cleared by a previous reload, and does not alter or delete database data.
 
-Goal labels explicitly refer to each child over the entire program. Combined totals refer only to selected classes; select every class for the school total. Review shows actual planned card points including rounding. Bonus rules default to points above the calculated value.
-
-Validation: browser tests cover blocked steps, successful preview, timeout/abort, preserved inputs, retry, folder creation and card generation. Full app navigation integration passes. No live database or deployment was changed or tested.
+Validation: reproduced the old failure using a delayed folder read and the actual section-leave guard event. After the fix, saved folders become visible. Tests also cover save failure, retained inputs, red error, retry with the same request ID, preview timeout, and generation/download flow. No live database state was verified.
