@@ -97,7 +97,7 @@ function route(){
  if(currentRoute&&next!==currentRoute&&!window.dispatchEvent(new CustomEvent('motivation-section-leave',{cancelable:true,detail:{from:currentRoute,to:next}}))){history.replaceState(null,'',currentHash);window.dispatchEvent(new Event('motivation-navigation'));return;}
  if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
  const entering=next!==currentRoute;
- if(entering&&currentRoute){history.replaceState(null,'','#'+next);}
+ // Main-menu links already target section roots; preserve explicit nested links such as planner week folders.
  currentRoute=next;currentHash=location.hash||'#dashboard';$('programBar').hidden=next!=='dashboard';for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
  if(entering)window.dispatchEvent(new CustomEvent('motivation-section-enter',{detail:next}));
  $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');window.dispatchEvent(new Event('motivation-navigation'));

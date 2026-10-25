@@ -37,3 +37,16 @@ main{max-width:1200px;margin:auto;padding:32px 24px}h1{font-size:32px;margin:10p
 /* Class-sheet controls sit directly beside the right-aligned names. */
 #eligibilityTable .classSheet[dir=rtl]{max-width:980px}#eligibilityTable .classSheet[dir=rtl] th:nth-child(2){width:200px}#eligibilityTable .classSheet[dir=rtl] td:nth-child(2){text-align:left;padding-left:9px}#eligibilityTable .classSheet[dir=rtl] th:nth-child(n+3){width:62px}#eligibilityTable .classSheet[dir=rtl] td:nth-child(5){font-size:12px;color:inherit;font-weight:normal}#eligibilityTable .classSheet[dir=rtl] th:last-child{width:80px}.classSheet tr[data-state=hold] .eligibilityState{color:#9a4b00;font-weight:bold}.classSheet tr[data-state=partial] .eligibilityState{color:#856400;font-weight:bold}.classSheet tr[data-state=approved] .eligibilityState{color:#147d76;font-weight:bold}.classSheet tbody tr:hover{background:#dcefe9!important}#sheetSaveBar{position:sticky;bottom:10px;display:flex;justify-content:center;align-items:center;gap:18px;padding:10px;background:#fff5d9;border:1px solid #dfbc62;border-radius:9px;z-index:3}#studentProfile>.top{direction:ltr}#studentProfile>.top>div{text-align:left;flex:1}#profileName,#profileClass,#profileAddress,#profileTeacher,#profileExtra{text-align:left}#profilePhones{display:block;text-align:left}#profilePhones p,#profileAddress,#profileExtra p{margin:4px 0;font-size:13px}#profileTeacher p{text-align:left}#profileAddress{white-space:pre-wrap}
 #eligibilityTable .classSheet[dir=rtl] th:nth-child(2){text-align:left;padding-left:9px}
+
+/* Program planner */
+#plannerPanel fieldset{margin:16px 0;padding:16px;border:1px solid #d7dee8;border-radius:10px}
+#plannerPanel input,#plannerPanel select{max-width:100%}
+#planSessionQuantities,.plannerRule{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;align-items:end}
+#planSessionQuantities label{max-width:180px}.plannerClasses{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px}
+#plannerPanel table{width:100%;border-collapse:collapse}#plannerPanel td,#plannerPanel th{padding:8px;border-bottom:1px solid #d7dee8;text-align:start}
+#plannerPanel details{margin:12px 0;padding:12px;background:#f6f8fb;border-radius:8px}#plannerPanel summary{cursor:pointer;font-weight:600}
+.plannerActions{position:sticky;bottom:0;background:white;padding:12px;border-top:1px solid #d7dee8;display:flex;gap:12px;z-index:2}
+.plannerWeekGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}.plannerWeekGrid article{padding:16px;border:1px solid #d7dee8;border-radius:12px}.plannerSaved{margin:20px 0}
+#planPreview{overflow-x:auto}#plannerPanel [hidden],#plannerFolders[hidden],#plannerPanel[hidden]{display:none!important}
+
+.plannerSteps{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.plannerSteps button[aria-current="step"]{background:#165d9d;color:white}.plannerSteps button span{display:inline-flex;width:22px;height:22px;border:1px solid currentColor;border-radius:50%;align-items:center;justify-content:center;font-size:12px}.plannerClasses label{display:flex;align-items:center;gap:8px}.plannerClasses input,#planAllClasses{width:auto}#plannerPanel .plannerActions{position:static}
