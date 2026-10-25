@@ -18,7 +18,7 @@ export function initWorkspace(db,org,roster){
  let programs=[],state=null,active='',settingsDirty=false,loading=0,logs=[],logFilter={},current=null,taskBusy=false,taskDirty=false,taskHandler=null,request=null;
  const message=(s)=>{$('workspaceMessage').textContent=s;};
  const activeProgram=()=>programs.find(p=>p.id===active);
- async function rpc(name,args){const {data,error}=await db.rpc(name,args);if(error){if(['42501','PGRST301','PGRST303'].includes(error.code)){document.body.setAttribute('data-auth-locked','');$('authGateMessage').textContent='Access could not be verified. Please sign in again.';}throw error;}return data;}
+ async function rpc(name,args,signal){let query=db.rpc(name,args);if(signal)query=query.abortSignal(signal);const {data,error}=await query;if(error){if(['42501','PGRST301','PGRST303'].includes(error.code)){document.body.setAttribute('data-auth-locked','');$('authGateMessage').textContent='Access could not be verified. Please sign in again.';}throw error;}return data;}
  async function command(action,data){
   const payload=JSON.stringify({action,data});if(!request||request.payload!==payload)request={payload,id:crypto.randomUUID()};
   const result=await rpc('rr_motivation_command_v5',{p_org:org,p_request:request.id,p_action:action,p_data:data});request=null;return result;
