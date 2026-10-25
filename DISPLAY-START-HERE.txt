@@ -1,0 +1,38 @@
+דיספלעי — וואס צו טון
+
+1. GitHub
+עקסטרעקט דעם YKONNECT_Display_Connected_Update.zip און לייג ארויף דעם אינהאלט
+אין raiseroster-test, מיט די זעלבע פאלדערס. נישט דעם ZIP אליין.
+
+2. Supabase
+עפן Activate_Display_Devices.sql ווי א טעקסט־פייל.
+קאפיר נאר דעם SQL אין א נייע SQL Editor קווערי און לויף עס.
+ס׳דארף אויסקומען DISPLAY_DEVICES_READY.
+קיין HTML אדער <!doctype html> געהערט נישט אין SQL Editor.
+דער SQL ריסעט נישט קיין קינדער, קארטלעך אדער נקודות.
+
+3. קינדער־בילדער
+מען דארף אויך דעפלויען די Edge Function מיטן נאמען display-photo.
+דער קאוד איז אין supabase/functions/display-photo/index.ts.
+JWT verification דארף זיין אויסגעלאשן פאר דער פונקציע; זי האט אן אייגענע
+פארבינדונג־קאוד־באשטעטיגונג. אן דעם ארבעט דער דיספלעי, אבער נישט די בילדער.
+די פולע אנווייזונגען שטייען אין DISPLAY-DEVICES-SETUP.md.
+
+4. Windows
+אינסטאליר YKONNECT-Display-Setup.exe אויפן דיספלעי־קאמפיוטער.
+אין עדמין: Display → Computers.
+לייג אריין די 9 ציפערן פונעם קאמפיוטער און געב אים א נאמען.
+קליק אויף זיין קנעפל, קלויב א פלאן און כתות, שטעל אן די אפציעס און סעוו.
+מיט Design קען מען אויסשטעלן דעם סקרין. נאכדעם קליק Save display settings.
+Turn on display צינדט אן דעם סקרין; דער קאמפיוטער בלייבט פארבונדן אין בעקגראונד.
+
+5. פובליק דאונלאוד און אויטאמאטישע אפדעיטס
+די .github/workflows/display-release.yml דארף אויך זיין אין GitHub.
+אין GitHub: Actions → Windows display player → Run workflow.
+נאכן ערפאלגרייכן Release וועט דער פעסטער פובליק־דאונלאוד ארבעטן:
+https://github.com/yeshayekrausz-wq/raiseroster-test/releases/latest/download/YKONNECT-Display-Setup.exe
+
+דער אינסטאלער איז געבויט, אבער מען דארף אים נאך אויספרובירן אויף Windows,
+מיטן אמתן סקענער און פרינטער. ער האט דערווייל נישט קיין Windows signing certificate.
+דער פול־סקרין מאדוס איז נישט א פולע Windows־פארשפארונג. Task Manager בלייבט צוטריטלעך.
+די סקעדזשועל קאנטראלירט דעם סקרין, נישט דעם פראדזשעקטערס עלעקטרישן פאוער.
