@@ -1,0 +1,12 @@
+import {readFile,writeFile} from 'node:fs/promises';
+let s=await readFile(new URL('../motivation/projector/preview.html',import.meta.url),'utf8');
+s=s.replace(/const classes=.*\nconst students=.*\nconst rewards=.*\n/,'const classes=[];\nconst students=[];\nconst rewards=[];\n');
+s=s.replace(/\$\('sampleCodes'\)\.innerHTML=.*\n/,'');
+s=s.replace(/try\{const saved=JSON.parse\(localStorage.getItem\(designStore\).*\n/,'');
+s=s.replace(/function saveDesign\(\).*\n/,"function saveDesign(){if(window.parent!==window)window.parent.postMessage({type:'yk-design',design:designs},location.origin);}\n");
+s=s.replace('DESIGN PREVIEW · Sample students and cards only · No database connection','Display designer');
+s=s.replace('YK Connect · Motivation display preview','School display');
+s=s.replace('<span>PREVIEW · SAMPLE DATA</span>','');
+s=s.replace('</head>','<style>body:not(.ready){visibility:hidden}body:not(.designing) .toolbar{display:none!important}body:not(.designing):not(.editing){cursor:none}body:not(.designing) #display{height:100dvh;min-height:0}</style></head>');
+s=s.replace('</script></body>','</script><script src="bridge.js"></script></body>');
+await writeFile(new URL('../motivation/display/index.html',import.meta.url),s);

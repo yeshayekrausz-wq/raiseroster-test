@@ -1,3 +1,4 @@
+import {initDevices} from './devices.js';
 import {initPlanner} from './planner.js';
 import {initBulkAdd} from './bulk-add.js';
 import {initEligibility} from './eligibility.js';
@@ -166,7 +167,7 @@ export function initWorkspace(db,org,roster){
  function setupSections(){
   const display=$('displayPanel'),headings=display.querySelectorAll('h2');const playlist=headings[0],media=headings[1],actions=display.lastElementChild;
   groupRange(display,display.firstChild,playlist,'schedule');groupRange(display,playlist,media,'slides');groupRange(display,media,actions,'media');
-  const device=document.createElement('section');device.dataset.subsection='devices';device.innerHTML='<h2>Display computers</h2><p>The dedicated computer player will be paired by device ID here. Remote fullscreen locking and automatic startup require that installed player; they are not available in this browser version.</p>';display.insertBefore(device,actions);subnav(display,'display',[['schedule','Schedule'],['slides','Slides'],['media','Pictures & videos'],['devices','Computers']]);
+  const device=document.createElement('section');device.dataset.subsection='devices';display.insertBefore(device,actions);initDevices(device,{rpc,org,program:()=>active,roster,db});subnav(display,'display',[['schedule','Schedule'],['slides','Slides'],['media','Pictures & videos'],['devices','Computers']]);
   const phone=$('phonePanel'),select=$('blockedStudents'),label=select.parentElement,save=phone.lastElementChild;
   groupRange(phone,phone.firstChild,label,'numbers');const freeze=groupRange(phone,label,save,'freeze');select.hidden=true;label.firstChild.textContent='';freeze.querySelector('p').remove();
   const selector=document.createElement('div');selector.innerHTML=`<label>Class<select id="freezeClass">${roster.getClasses().map(c=>option(c.id,c.name)).join('')}</select></label><div id="freezeNames"></div>`;freeze.prepend(selector);
