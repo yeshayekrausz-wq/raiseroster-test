@@ -1,0 +1,33 @@
+name: Windows display player
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/display/**', 'scripts/build-display-windows.cjs', 'scripts/nsis-uninstaller.cjs', 'motivation/display/**', 'shared/config.js', '.github/workflows/display-release.yml']
+permissions:
+  contents: write
+concurrency:
+  group: display-release
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/display/package-lock.json
+      - run: npm ci
+        working-directory: desktop/display
+      - run: npm version 1.2.${{ github.run_number }} --no-git-tag-version
+        working-directory: desktop/display
+      - run: npx electron-builder --win nsis --x64 --publish never
+        working-directory: desktop/display
+      - name: Publish installer and updater metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "display-v1.2.${{ github.run_number }}" desktop/display/dist/YKONNECT-Display-Setup.exe desktop/display/dist/YKONNECT-Display-Setup.exe.blockmap desktop/display/dist/latest.yml --title "YKonnect Display 1.2.${{ github.run_number }}" --notes "Windows display player. Install once; later releases update automatically." --latest
