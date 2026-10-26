@@ -1,0 +1,9 @@
+1. Extract ZIP. Upload desktop, motivation and supabase folders into the root of raiseroster-test, preserving paths. Commit to main.
+2. GitHub Actions: Windows display player should start automatically because desktop/display changed. Wait for green. Download and install the newly published EXE on the display computer (or wait for its automatic updater). The window activation fix requires this new EXE.
+3. Supabase: open Edge Functions > display-photo > Code. Replace index.ts with the COMPLETE contents of supabase/functions/display-photo/index.ts from this ZIP. Deploy the function. Keep Verify JWT disabled: this function authorizes each request using the device secret and database access checks. Do not paste TypeScript into SQL Editor.
+CLI alternative: supabase functions deploy display-photo --no-verify-jwt
+4. Refresh admin and restart player. In Display Settings choose the computer, enable Show student photos, and select Student order > Last name — א–ב, then Save display settings.
+No SQL migration is required.
+Sorting follows the same convention as the roster: the final word of the stored full name is the family name.
+This package also includes the previous Remove photo and media URL changes.
+Verified with browser tests and a simulated Electron window. Actual Windows foreground behavior still needs verification on the display computer. If photos remain missing after deployment, send the display-photo Edge Function error/log; live deployment and storage access have not been verified here.

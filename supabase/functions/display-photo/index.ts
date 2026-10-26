@@ -25,7 +25,7 @@ Deno.serve(async req=>{
   const storagePath=path.slice('motivation-private:'.length);if(!storagePath||storagePath.includes('..'))throw Error('Invalid photo');
   const privateClient=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
   const {data:blob,error:downloadError}=await privateClient.storage.from('motivation-media').download(storagePath);
-  if(downloadError||!blob||blob.size>5*1024*1024||!['image/png','image/jpeg','image/webp'].includes(blob.type))return new Response('Unavailable',{status:404,headers});
+  if(downloadError||!blob||blob.size>25*1024*1024||!['image/png','image/jpeg','image/webp'].includes(blob.type))return new Response('Unavailable',{status:404,headers});
   return new Response(blob,{headers:{...headers,'Content-Type':blob.type,'X-Content-Type-Options':'nosniff'}});
  }catch{return new Response('Unavailable',{status:403,headers});}
 });
