@@ -1,0 +1,14 @@
+body[data-theme=light]{background:#fff;color:#10251f;--green:#008f48;--gray:#909da3;--gold:#314e42}
+body[data-theme=light] #display,body[data-theme=light] #session{background:#f4fff6}
+body[data-theme=light] #cards .student{background:#fff;border:3px solid #b5d9be;box-shadow:0 4px 18px #143d1715}
+body[data-theme=light] .className,body[data-theme=light] .score,body[data-theme=light] .heading p,body[data-theme=light] .goal,body[data-theme=light] .holdLabel{color:#173b2a;font-weight:800}
+body[data-theme=light] #cards .identity h2{font-weight:800;color:#10281c}
+body[data-theme=light] .meter{background:#dcece0;border:2px solid #789c82}
+body[data-theme=light] .approved{background:#009747}body[data-theme=light] .held{background:#88969e}
+body[data-theme=light] #lockedBrand{color:#315240}
+body.designing #designToolbar{position:sticky;top:0;max-height:34vh;overflow:auto;gap:8px;padding:14px;background:#122c29;color:#fff;box-shadow:0 3px 12px #0004}
+body.designing .customBox{min-width:45px}body.designing .customBox.selected{outline:4px solid #df9517}
+body[data-theme=light].designing [data-design-key]{outline-color:#679d7c}
+#mediaStage{position:fixed;inset:0;z-index:20;background:#000;display:grid;place-items:center}#mediaStage img,#mediaStage video{width:100%;height:100%;object-fit:contain}#mediaStage .mediaBrand{position:absolute;bottom:12px;left:0;right:0;text-align:center;color:white;font:13px Arial;text-shadow:0 1px 4px black}
+body[data-theme=light] #lockedBrand{background:#f4fff6;color:#315240}
+body[data-theme=light].designing .customBox{background-color:#ffffffb0}

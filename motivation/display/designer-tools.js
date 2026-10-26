@@ -1,0 +1,19 @@
+// Editing stays local until the parent admin saves the device.
+(()=>{
+let history=[],cursor=-1,restoring=false,timer;
+const originalSave=saveDesign;
+const originalAdd=addCustom;addCustom=(...args)=>{originalAdd(...args);if(document.body.dataset.theme==='light'&&selectedBox?.custom){const v=settingsFor()[selectedBox.key];v.style.color='#10281c';applyStyle(selectedBox.el,v.style);$('boxColor').value='#10281c';saveDesign();}};
+function checkpoint(){const value=JSON.stringify(designs);if(value===history[cursor])return;history=history.slice(0,cursor+1);history.push(value);if(history.length>60)history.shift();cursor=history.length-1;buttons();}
+function buttons(){undo.disabled=cursor<=0;redo.disabled=cursor>=history.length-1;}
+function step(delta){clearTimeout(timer);checkpoint();const index=cursor+delta;if(index<0||index>=history.length)return;cursor=index;restoring=true;designs=JSON.parse(history[cursor]);selectedBox=null;render();sessionRender();originalSave();restoring=false;buttons();}
+function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;$('doneDesign').before(b);return b;}
+const undo=button('↶ Undo',()=>step(-1)),redo=button('↷ Redo',()=>step(1));
+const originalDesign=designScreen;designScreen=()=>{history=[];cursor=-1;checkpoint();originalDesign();};$('designScreen').onclick=designScreen;
+saveDesign=()=>{originalSave();if(!restoring){clearTimeout(timer);timer=setTimeout(checkpoint,300);}};
+button('Duplicate',()=>{if(!selectedBox?.custom)return;const key='custom:'+crypto.randomUUID(),v=structuredClone(settingsFor()[selectedBox.key]);v.x=Math.min(100-v.w,v.x+3);v.y=Math.min(100-v.h,v.y+3);settingsFor()[key]=v;renderDesign();saveDesign();});
+button('Preview',()=>{exitDesign();const back=document.createElement('button');back.textContent='Back to design';back.style='position:fixed;top:12px;right:12px;z-index:10000;background:#153f31;color:white';document.body.append(back);back.onclick=()=>{back.remove();originalDesign();};});
+const layout=document.createElement('div');layout.style='display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+for(const [key,label] of [['x','Left %'],['y','Top %'],['w','Width %'],['h','Height %']]){const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.type='number';input.min=0;input.max=100;input.style='width:65px';input.dataset.geometry=key;l.append(input);layout.append(l);input.onchange=()=>{if(!selectedBox?.custom)return;const v=settingsFor()[selectedBox.key];v[key]=Math.min(100,Math.max(key==='w'||key==='h'?1:0,Number(input.value)));v.w=Math.min(v.w,100-v.x);v.h=Math.min(v.h,100-v.y);const key=selectedBox.key;renderDesign();const el=rootForPage().querySelector('[data-custom-key="'+key+'"]');if(el)selectBox(el,key,true);saveDesign();};}$('designStatus').before(layout);
+const originalSelect=selectBox;selectBox=(el,key,custom)=>{originalSelect(el,key,custom);layout.querySelectorAll('input').forEach(i=>{i.disabled=!custom;i.value=custom?Math.round(settingsFor()[key][i.dataset.geometry]*10)/10:'';});};
+document.addEventListener('keydown',e=>{if(!designing||!(e.ctrlKey||e.metaKey))return;if(e.key.toLowerCase()==='z'||e.key.toLowerCase()==='y'){e.preventDefault();step(e.shiftKey||e.key.toLowerCase()==='y'?1:-1);}});buttons();
+})();
