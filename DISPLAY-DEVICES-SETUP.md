@@ -1,3 +1,9 @@
+# Update 1.1
+
+For current behavior and upgrade steps, read DISPLAY-UPGRADE-START.txt. The original
+setup notes below describe version 1.0; code expiration, hidden off-windows and
+slideshow limitations there are superseded by version 1.1.
+
 # Connected school display — installation
 
 This update is built and tested locally. It has not been deployed to GitHub Pages,
