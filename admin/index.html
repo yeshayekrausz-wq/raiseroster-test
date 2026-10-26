@@ -2472,6 +2472,7 @@ function finishProfileNavigator(commit){
   $('addAmount').select();
 }
 document.addEventListener('keydown',e=>{
+  if(e.target.closest?.('input,textarea,select,[contenteditable=true],[role=textbox]')){if(profileNavigator)finishProfileNavigator(false);if(e.shiftKey)profileNavigatorSuppressed=true;return;}
   if(e.isComposing || e.ctrlKey || e.altKey || e.metaKey){
     if(profileNavigator)finishProfileNavigator(false);
     if(e.shiftKey)profileNavigatorSuppressed=true;

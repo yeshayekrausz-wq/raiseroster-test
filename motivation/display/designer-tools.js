@@ -1,6 +1,11 @@
 // Editing stays local until the parent admin saves the device.
 (()=>{
 let history=[],cursor=-1,restoring=false,timer;
+const syncLabel=document.createElement('label');syncLabel.style='display:flex;align-items:center;gap:6px';const sync=document.createElement('input');sync.type='checkbox';syncLabel.append(sync,document.createTextNode('Apply style to all class cards / text boxes'));$('doneDesign').before(syncLabel);
+function syncStyles(){if(!sync.checked||!selectedBox)return;const page=settingsFor(),key=selectedBox.key,source=page[key];if(!source?.style)return;const suffix=key.startsWith('card:')?key.slice(key.lastIndexOf(':')+1):null;
+for(const el of rootForPage().querySelectorAll('[data-design-key],.customBox')){const other=el.dataset.designKey||el.dataset.customKey;if(other===key)continue;if(suffix?other.startsWith('card:')&&other.endsWith(':'+suffix):selectedBox.custom&&el.dataset.customKey){const target=page[other]||={};target.style=structuredClone(source.style);applyStyle(el,target.style);}}
+const card=selectedBox.el.closest('.student');if(card){const color=page['card:'+card.dataset.class+':background'];if(color)rootForPage().querySelectorAll('.student').forEach(c=>{page['card:'+c.dataset.class+':background']=color;c.style.background=color;});}}
+sync.onchange=()=>{if(sync.checked){syncStyles();saveDesign();}};
 const originalSave=saveDesign;
 const originalAdd=addCustom;addCustom=(...args)=>{originalAdd(...args);if(document.body.dataset.theme==='light'&&selectedBox?.custom){const v=settingsFor()[selectedBox.key];v.style.color='#10281c';applyStyle(selectedBox.el,v.style);$('boxColor').value='#10281c';saveDesign();}};
 function checkpoint(){const value=JSON.stringify(designs);if(value===history[cursor])return;history=history.slice(0,cursor+1);history.push(value);if(history.length>60)history.shift();cursor=history.length-1;buttons();}
@@ -9,7 +14,7 @@ function step(delta){clearTimeout(timer);checkpoint();const index=cursor+delta;i
 function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;$('doneDesign').before(b);return b;}
 const undo=button('↶ Undo',()=>step(-1)),redo=button('↷ Redo',()=>step(1));
 const originalDesign=designScreen;designScreen=()=>{history=[];cursor=-1;checkpoint();originalDesign();};$('designScreen').onclick=designScreen;
-saveDesign=()=>{originalSave();if(!restoring){clearTimeout(timer);timer=setTimeout(checkpoint,300);}};
+saveDesign=()=>{syncStyles();originalSave();if(!restoring){clearTimeout(timer);timer=setTimeout(checkpoint,300);}};
 button('Duplicate',()=>{if(!selectedBox?.custom)return;const key='custom:'+crypto.randomUUID(),v=structuredClone(settingsFor()[selectedBox.key]);v.x=Math.min(100-v.w,v.x+3);v.y=Math.min(100-v.h,v.y+3);settingsFor()[key]=v;renderDesign();saveDesign();});
 button('Preview',()=>{exitDesign();const back=document.createElement('button');back.textContent='Back to design';back.style='position:fixed;top:12px;right:12px;z-index:10000;background:#153f31;color:white';document.body.append(back);back.onclick=()=>{back.remove();originalDesign();};});
 const layout=document.createElement('div');layout.style='display:flex;gap:8px;align-items:center;flex-wrap:wrap';

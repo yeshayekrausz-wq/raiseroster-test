@@ -1,3 +1,4 @@
+import {bindPasteGrid} from './paste-grid.js';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fields=[['name','Name'],['phone','Main phone'],['home_phone','Home phone'],['father_phone','Father phone'],['mother_phone','Mother phone'],['other_phone','Other phone'],['address','Address'],['gregorian_birthday','Birth date'],['hebrew_birthday','Hebrew birthday'],['notes','Notes']];
 export function initBulkAdd({rpc,org,roster}){
@@ -6,6 +7,7 @@ export function initBulkAdd({rpc,org,roster}){
  let busy=false,request=null,fingerprint=null;
  const status=s=>$('bulkAddStatus').textContent=s;
  function addRow(values=[]){if($('bulkAddRows').children.length>=200){status('Maximum 200 students at once.');return;}const row=document.createElement('tr');row.innerHTML=fields.map(([key,label],i)=>`<td><input aria-label="${label}" data-field="${key}" value="${esc(values[i]||'')}" ${key==='gregorian_birthday'?'type="date"':''} ${key==='name'?'required maxlength="160"':''}></td>`).join('')+'<td><button type="button">Remove</button></td>';row.querySelector('button').onclick=()=>row.remove();$('bulkAddRows').append(row);}
+ bindPasteGrid($('bulkAddRows'),{getRows:()=>[...$('bulkAddRows').children],addRow,onError:status});
  button.onclick=()=>{request=null;fingerprint=null;$('bulkAddForm').reset();$('bulkAddClass').innerHTML='<option value="">Choose class</option>'+roster.getClasses().filter(c=>c.id!=='unassigned').map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');$('bulkAddClass').value=roster.getClass()||'';$('bulkAddRows').replaceChildren();addRow();status('');dialog.showModal();};
  function dirty(){return [...$('bulkAddRows').querySelectorAll('input')].some(x=>x.value)||$('bulkPaste').value;}
  function close(){if(!busy&&(!dirty()||confirm('Discard unsaved student rows?')))dialog.close();}

@@ -60,6 +60,7 @@ export function initRoster(db,org){
   $('navStudents').innerHTML=rows.map((s,i)=>`<div id="nav-student-${i}" class="nav-row ${s.id===nav.id?'selected':''}" role="option" aria-selected="${s.id===nav.id}"><span>#${esc(s.short_id||'')}</span><span dir="auto">${esc(s.name)}</span></div>`).join('');const selected=$('navStudents').querySelector('.selected');if(selected){$('navStudents').setAttribute('aria-activedescendant',selected.id);selected.scrollIntoView({block:'nearest'});}}
  function begin(){if(nav||suppressed||!students.length)return;const pupil=currentStudent||group(currentClass)[0]||students[0];nav={id:pupil.id,class_id:pupil.class_id||'unassigned'};$('profileNavigator').hidden=false;navigator.showPopover();drawNav();}
  document.addEventListener('keydown',e=>{
+  if(e.target.closest?.('input,textarea,select,[contenteditable=true],[role=textbox]')){finish(false);if(e.shiftKey)suppressed=true;return;}
   if(e.altKey&&e.key==='1'&&!adding&&!$('addStudentDialog').open&&!$('rosterView').hidden){e.preventDefault();if($('studentProfile').open)closeProfile();$('studentSearch').focus();return;}
   if([...document.querySelectorAll('dialog[open]')].some(d=>d.id!=='studentProfile'))return;
   if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing){finish(false);if(e.shiftKey)suppressed=true;return;}
