@@ -14,8 +14,8 @@ export function initPhoneTest(host,{rpc,org,program}){
   try{
    const r=await rpc('rr_phone_test',{...payload,p_request:pending.id});pending=null;call=r.call;callProgram=selected;identified=r.identified;
    el('[data-call]').hidden=false;input.maxLength=identified?6:4;input.value='';input.setAttribute('aria-label',identified?'Six-digit card code':'Four-digit student ID');
-   log((r.name?r.name+' — ':'')+r.message+(r.outcome==='accepted'?' · '+r.points+' points · '+(r.held?'On Hold':'Approved')+' (simulation)':''),r.outcome==='denied');
-   if(r.outcome==='ended'){call=null;identified=false;el('[data-call]').hidden=true;}
+   log((r.name?r.name+' — ':'')+r.message+(r.outcome==='accepted'?' · '+r.points+' points · '+(r.held?'On Hold':'Approved')+' (simulation)':'')+(r.balance?' · Saved balance: '+r.balance.approved+' Approved · '+r.balance.held+' on Hold (test points are not added)':''),r.outcome==='denied');
+   if(r.closed||r.outcome==='ended'){call=null;identified=false;el('[data-call]').hidden=true;}
   }catch(e){if(e.code)pending=null;log(e.code==='PGRST202'||e.code==='42883'?'Run Activate_Phone_Test.sql in Supabase first.':e.message||'Connection uncertain. Retry the same action.',true);}
   finally{busy=false;enable();if(call)input.focus();}
  }
