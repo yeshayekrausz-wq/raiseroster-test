@@ -1,13 +1,13 @@
 {
   "name": "ykonnect-display",
-  "version": "1.1.0",
-  "description": "YKONNECT paired school display player",
+  "version": "1.1.2",
+  "description": "YKonnect paired school display player",
   "main": "main.cjs",
-  "author": "YKONNECT",
+  "author": "YKonnect",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis --x64 --publish never"
+    "dist": "node ../../scripts/build-display-windows.cjs"
   },
   "dependencies": {
     "electron-updater": "6.8.11"
@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "com.ykonnect.display",
-    "productName": "YKONNECT Display",
+    "productName": "YKonnect Display",
     "directories": {
       "output": "dist"
     },
@@ -26,17 +26,21 @@
       "main.cjs",
       "preload.cjs",
       "pair.html",
-      "package.json"
+      "package.json",
+      "assets/**"
     ],
     "win": {
       "target": "nsis",
-      "signAndEditExecutable": false,
-      "artifactName": "YKONNECT-Display-Setup.exe"
+      "artifactName": "YKONNECT-Display-Setup.exe",
+      "signExecutable": false,
+      "icon": "assets/display.ico"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "installerIcon": "assets/display.ico",
+      "uninstallerIcon": "assets/display.ico"
     },
     "publish": {
       "provider": "github",

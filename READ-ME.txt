@@ -1,0 +1,9 @@
+YKonnect Display 1.1.2
+
+Upload the folders in this ZIP to the same locations in GitHub. No SQL changes are needed.
+
+Install the separately supplied YKonnect-Display-1.1.2-Setup.exe to use the new icon on this PC.
+The Windows app, installer, uninstaller and tray now use the display icon. Product branding is YKonnect Display.
+Includes the prior Chromium network fix and the Linux NSIS uninstaller icon/CRC fix.
+The fixed installer must be used; do not reinstall the old 1.1.0/1.1.1 files.
+Windows install/uninstall runtime testing remains necessary.
