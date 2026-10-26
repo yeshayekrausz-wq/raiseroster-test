@@ -1,3 +1,4 @@
+import {initPhoneTest} from './phone-test.js';
 import {studentEditSheet} from './paste-grid.js';
 import {uploadMediaFile} from './upload-media.js';
 import {initDevices} from './devices.js';
@@ -184,7 +185,7 @@ export function initWorkspace(db,org,roster){
   groupRange(phone,phone.firstChild,label,'numbers');const freeze=groupRange(phone,label,save,'freeze');select.hidden=true;label.firstChild.textContent='';freeze.querySelector('p').remove();
   const selector=document.createElement('div');selector.innerHTML=`<label>Class<select id="freezeClass">${roster.getClasses().map(c=>option(c.id,c.name)).join('')}</select></label><div id="freezeNames"></div>`;freeze.prepend(selector);
   function freezeNames(){const cls=$('freezeClass').value;$('freezeNames').innerHTML=roster.getStudents().filter(x=>(x.class_id||'unassigned')===cls).map(x=>`<label class="switch"><input type="checkbox" data-freeze="${esc(x.id)}" ${[...select.selectedOptions].some(o=>o.value===x.id)?'checked':''}>${esc(x.name)}</label>`).join('')||'<p>No students in this class.</p>';$('freezeNames').onchange=e=>{const id=e.target.dataset.freeze;if(id){[...select.options].find(o=>o.value===id).selected=e.target.checked;settingsDirty=true;}};}
-  $('freezeClass').onchange=freezeNames;freezeNames();subnav(phone,'phone',[['numbers','Allowed numbers'],['freeze','Freeze by class']]);
+  $('freezeClass').onchange=freezeNames;freezeNames();const testPhone=document.createElement('section');testPhone.dataset.subsection='test';phone.insertBefore(testPhone,save);initPhoneTest(testPhone,{rpc,org,program:()=>active});subnav(phone,'phone',[['numbers','Allowed numbers'],['freeze','Freeze by class'],['test','Test phone']]);
   showSections();
  }
  window.addEventListener('hashchange',()=>{showSections();if(location.hash==='#support')support();});
