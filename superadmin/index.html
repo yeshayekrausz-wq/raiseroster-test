@@ -223,7 +223,9 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import {createProgramPanel} from '../shared/program-panel.js';
 const SUPABASE_URL='https://jqylxbqwznoohscjbxrx.supabase.co';
 const SUPABASE_KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
+import {initAppLauncher} from '../shared/app-launcher.js';
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+initAppLauncher(supabase,document.querySelector('.topActions'));
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 let session=null, membership=null, organizations=[], plans=[], subs=[], discounts=[], orgDiscs=[], threads=[], legacyFeedback=[], memberRows=[], authUsers=[], selectedThread=null, detailOrgId=null, detailOverview=null;

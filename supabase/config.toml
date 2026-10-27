@@ -1,3 +1,7 @@
 # Device capability is checked inside the function and in the database RPCs.
 [functions.display-photo]
 verify_jwt = false
+
+# The function verifies the user with Auth and checks administrator permission in the RPC.
+[functions.teacher-invite]
+verify_jwt = false

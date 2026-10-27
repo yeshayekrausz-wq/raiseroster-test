@@ -1551,7 +1551,9 @@ import {birthdayDisplay,birthdayISO} from "../shared/dates.js";
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const SUPABASE_URL='https://jqylxbqwznoohscjbxrx.supabase.co';
 const SUPABASE_KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
+import {initAppLauncher} from '../shared/app-launcher.js';
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+initAppLauncher(supabase,document.querySelector('.accountArea'));
 const $=id=>document.getElementById(id);
 
 let currentSession=null;
