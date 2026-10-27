@@ -1,0 +1,3 @@
+# Device capability is checked inside the function and in the database RPCs.
+[functions.display-photo]
+verify_jwt = false

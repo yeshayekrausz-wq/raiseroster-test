@@ -86,20 +86,26 @@ try{
  const verified=await db.auth.getUser();if(verified.error||!verified.data?.user)throw Error('Sign-in could not be verified. Please sign in again.');authUser=verified.data.user.id;if(authUser!==data.session.user.id)throw Error('Session changed. Reload and sign in again.');
  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
  if(!member||!['admin','super_admin'].includes(member.role))throw Error('This workspace requires a school administrator account.');
- org=member.organization_id;await load();if(authBlocked)throw Error('Session ended. Please sign in again.');const roster=initRoster(db,org);initWorkspace(db,org,roster);window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');if(!authBlocked)document.body.removeAttribute('data-auth-locked');
+ org=member.organization_id;await load();if(authBlocked)throw Error('Session ended. Please sign in again.');const roster=initRoster(db,org);initWorkspace(db,org,roster);initAccountTools();window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');if(!authBlocked)document.body.removeAttribute('data-auth-locked');
  }
 }catch(e){lockAuth(e.message||'Access could not be verified. Reload or sign in again.');$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
 
 let currentRoute='',currentHash=location.hash||'#dashboard';
 function route(){
- const routes={eligibility:'eligibilityView',dashboard:'rosterView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView',teachers:'teachersView'};const key=location.hash.slice(1).split('/')[0];const next=routes[key]?key:'dashboard';
+ const routes={eligibility:'eligibilityView',dashboard:'rosterView',students:'studentsView',settings:'settingsView',documents:'documentsView',reports:'reportsView',display:'displayView',phone:'phoneView',support:'supportView',faq:'faqView',training:'trainingView',teachers:'teachersView'};const key=location.hash.slice(1).split('/')[0];const next=routes[key]?key:'dashboard';
  if(currentRoute&&next!==currentRoute&&!mayLeave()){history.replaceState(null,'',currentHash);window.dispatchEvent(new Event('motivation-navigation'));return;}
  if(currentRoute&&next!==currentRoute&&!window.dispatchEvent(new CustomEvent('motivation-section-leave',{cancelable:true,detail:{from:currentRoute,to:next}}))){history.replaceState(null,'',currentHash);window.dispatchEvent(new Event('motivation-navigation'));return;}
  if(currentRoute==='settings'&&next!=='settings'&&dirty)open(selected);
  const entering=next!==currentRoute;
  // Main-menu links already target section roots; preserve explicit nested links such as planner week folders.
- currentRoute=next;currentHash=location.hash||'#dashboard';$('programBar').hidden=next!=='dashboard';for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
+ currentRoute=next;currentHash=location.hash||'#dashboard';$('programBar').hidden=!['dashboard','students'].includes(next);for(const [key,id] of Object.entries(routes))$(id).hidden=key!==next;document.querySelectorAll('.adminSidebar a[href^="#"]').forEach(a=>a.classList.toggle('active',a.hash.split('/')[0]==='#'+next));
  if(entering)window.dispatchEvent(new CustomEvent('motivation-section-enter',{detail:next}));
  $('navDashboard').classList.toggle('active',next==='dashboard');$('navSettings').classList.toggle('active',next==='settings');window.dispatchEvent(new Event('motivation-navigation'));
 }
 window.addEventListener('hashchange',route);route();
+
+function initAccountTools(){
+ $('adminSignOut').onclick=async()=>{const {error}=await db.auth.signOut();if(error){alert(error.message);return;}lockAuth('Signed out.');location.href='../../';};
+ $('notificationBell').onclick=async()=>{const panel=$('notificationList');panel.hidden=!panel.hidden;if(panel.hidden)return;panel.textContent='Loading…';const {data,error}=await db.from('admin_notifications').select('id,title,body,created_at,read_at').order('created_at',{ascending:false}).limit(50);if(error){panel.textContent='Notifications could not load. '+error.message;return;}panel.innerHTML='<strong>Notifications</strong>'+((data||[]).map(n=>'<article><b>'+esc(n.title)+'</b><p>'+esc(n.body)+'</p><small>'+esc(new Date(n.created_at).toLocaleString())+'</small></article>').join('')||'<p>No notifications.</p>');};
+ document.addEventListener('click',e=>{if(!e.target.closest('.accountTools'))$('notificationList').hidden=true;});
+}

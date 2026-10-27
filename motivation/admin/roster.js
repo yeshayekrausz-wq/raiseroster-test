@@ -46,11 +46,11 @@ export function initRoster(db,org){
    if(!Array.isArray(data?.classes)||!Array.isArray(data?.students))throw Error('Invalid roster response.');
    classes=data.classes;students=data.students.sort((a,b)=>lastName(a.name).localeCompare(lastName(b.name),'he')||a.id.localeCompare(b.id));
    if(students.some(s=>!s.class_id))classes.push({id:'unassigned',name:'Unassigned'});
-   $('rosterContent').hidden=false;render();status('Shared school roster · '+students.length+' students');onLoaded();return true;
+   $('rosterContent').hidden=false;render();status('Shared school roster · '+students.length+' students');onLoaded();window.dispatchEvent(new Event('motivation-roster-refreshed'));return true;
   }catch(e){$('rosterContent').hidden=true;status(e.code==='PGRST202'||e.code==='42883'?'Shared students are not activated yet. Run the Stage 5 activation SQL, then press Refresh students.':e.message||'Unable to load students. Try Refresh students.',true);return false;}
   finally{loading=false;$('refreshRoster').disabled=false;}
  }
- $('refreshRoster').onclick=refresh;$('closeClass').onclick=()=>{$('rosterContent').classList.remove('classFocused');$('classPanel').hidden=true;$('allStudentsPanel').hidden=false;currentClass=null;};
+ $('refreshRoster').onclick=refresh;$('closeClass').onclick=()=>{$('rosterContent').classList.remove('classFocused');$('classPanel').hidden=true;$('allStudentsPanel').hidden=true;currentClass=null;};
  const navigator=$('profileNavigator');navigator.setAttribute('popover','manual');document.body.append(navigator);
  function finish(commit){const choice=nav;nav=null;if(navigator.matches(':popover-open'))navigator.hidePopover();$('profileNavigator').hidden=true;if(commit&&choice&&(choice.id!==currentStudent?.id||!$('studentProfile').open))openStudent(choice.id);}
  function closeProfile(){finish(false);$('studentProfile').close();currentStudent=null;$('studentSearch').focus();}
