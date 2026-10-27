@@ -1,8 +1,10 @@
+import {initAppLauncher} from './app-launcher.js';
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import {SUPABASE_URL,SUPABASE_KEY} from './config.js';
 import {readSchoolMenu} from './programs.js';
 const db=createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
+initAppLauncher(db,document.getElementById('sessionActions'));
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let user=null, members=[], schools=[], generation=0, menuGeneration=0, schoolMenu=null;
 const icon={campaigns:'<path d="M5 22V12h5v10M13 22V7h5v15M21 22V3h5v19M3 27h26"/>',motivation:'<path d="m16 3 4 8 9 1-6.5 6.5 1.5 9L16 23l-8 4.5 1.5-9L3 12l9-1z"/>',admin:'<rect x="4" y="4" width="24" height="24" rx="4"/><path d="M4 12h24M13 12v16"/>',projector:'<rect x="3" y="4" width="26" height="18" rx="3"/><path d="M16 22v7M10 29h12"/>'};
@@ -21,10 +23,10 @@ function draw(){
  $('viewTitle').textContent=route==='campaigns'?'Campaigns':route==='motivation'?'Motivation':'Your programs';
  $('viewIntro').textContent=route==='home'?'Choose a program to get started.':'Choose your workspace.';
  $('programs').innerHTML='';
- if(!member){$('workspaceStatus').textContent='No school membership is assigned to this account. Contact your administrator.';return;}
+ if(!member){$('workspaceStatus').textContent='For your class workspace, open the teacher portal.';$('programs').innerHTML=card('admin','Teacher portal','Open your assigned classes and shared notes.','./motivation/teacher/');return;}
  // Stage 1 does not expose legacy full-admin pages to teacher/staff roles.
  if(!['admin','super_admin'].includes(member.role)){
-  $('workspaceStatus').textContent='Your account is connected. Your class-specific staff portal is not available yet. Contact your administrator.';return;
+  $('workspaceStatus').textContent='';$('programs').innerHTML=card('admin','Teacher portal','Open your assigned classes and shared notes.','./motivation/teacher/');return;
  }
  $('workspaceStatus').textContent='';
  if(!schoolMenu){$('workspaceStatus').textContent='Loading school programs…';return;}

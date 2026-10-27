@@ -1,3 +1,4 @@
+import {initAppLauncher} from '../../shared/app-launcher.js';
 import {prepareStudentPhoto} from './photo-upload.js';
 import {uploadMediaFile} from './upload-media.js';
 export async function initAccountProfile(db,org,role){
@@ -6,5 +7,5 @@ export async function initAccountProfile(db,org,role){
  const panel=document.createElement('div');panel.id='accountProfileMenu';panel.hidden=true;const upload=document.createElement('button');upload.textContent='Upload profile picture';const status=document.createElement('p');status.setAttribute('role','status');panel.append(upload,signout,status);host.append(panel);const picker=document.createElement('input');picker.type='file';picker.accept='image/png,image/jpeg,image/webp';picker.hidden=true;host.append(picker);
  async function draw(){name.textContent=user?.user_metadata?.name||user?.email||'User';label.textContent=role==='super_admin'?'Super Admin':role==='admin'?'Admin':role||'';const path=user?.user_metadata?.yk_avatar_path;if(path?.startsWith(org+'/accounts/'+user.id+'/')){const {data,error}=await db.storage.from('motivation-media').createSignedUrl(path,3600);if(!error&&data){const img=document.createElement('img');img.alt='Your profile picture';img.src=data.signedUrl;icon.replaceChildren(img);}}}
  icon.onclick=()=>{panel.hidden=!panel.hidden;};upload.onclick=()=>{picker.value='';picker.click();};picker.onchange=async()=>{if(!picker.files[0])return;upload.disabled=true;status.textContent='Uploading…';try{const file=await prepareStudentPhoto(picker.files[0]),path=org+'/accounts/'+user.id+'/'+crypto.randomUUID()+'.jpg';await uploadMediaFile(db,path,file);const {data,error}=await db.auth.updateUser({data:{yk_avatar_path:path}});if(error)throw error;user=data.user;await draw();status.textContent='Profile picture saved.';}catch(e){status.textContent=e.message;}finally{upload.disabled=false;}};
- document.addEventListener('click',e=>{if(!host.contains(e.target))panel.hidden=true;});await draw();
+ document.addEventListener('click',e=>{if(!host.contains(e.target))panel.hidden=true;});await draw();initAppLauncher(db,host);
 }

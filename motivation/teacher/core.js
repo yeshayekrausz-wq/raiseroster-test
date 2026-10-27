@@ -1,0 +1,5 @@
+export const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function roundRobin(ids){const a=[...ids];if(a.length<2)return [];if(a.length%2)a.push(null);const rounds=[];for(let r=0;r<a.length-1;r++){const pairs=[];for(let i=0;i<a.length/2;i++)pairs.push([a[i],a[a.length-1-i]]);rounds.push(pairs);a.splice(1,0,a.pop());}return rounds;}
+export function average(exams,id){const scores=exams.flatMap(e=>(e.payload.rows||[]).filter(r=>(!id||r.id===id)&&r.score!==null&&r.score!==''&&Number.isFinite(Number(r.score))).map(r=>100*Number(r.score)/Number(e.payload.max))).filter(Number.isFinite);return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*100)/100:null;}
+export function localDay(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+export function dateInfo(day){const d=new Date(day+'T12:00:00');return {weekday:new Intl.DateTimeFormat('en-US',{weekday:'long'}).format(d),hebrew:new Intl.DateTimeFormat('he-u-ca-hebrew',{day:'numeric',month:'long',year:'numeric'}).format(d)};}
