@@ -1,3 +1,4 @@
+import {birthdayDisplay} from '../../shared/dates.js';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lastName=s=>{const p=s.trim().split(/\s+/);return (p.pop()||'')+' '+p.join(' ');};
@@ -22,7 +23,7 @@ export function initRoster(db,org){
   const s=students.find(s=>s.id===id);if(!s)return;currentStudent=s;
   $('profileName').textContent=s.name+ (s.short_id?' · #'+s.short_id:'');$('profileClass').textContent='כתה '+(classes.find(c=>c.id===(s.class_id||'unassigned'))?.name||'Unassigned');
   $('profilePhones').innerHTML=[['Main phone',s.phone],['Home',s.home_phone],['Father',s.father_phone],['Mother',s.mother_phone],['Additional',s.other_phone]].filter(([,n])=>n).map(([label,n])=>`<p>${label}: <span dir="ltr">${esc(phone(n))}</span></p>`).join('')||'<p>No phone numbers saved.</p>';
-  $('profileAddress').textContent=s.address?'Address: '+s.address:'Address: —';$('profileExtra').innerHTML=[['Birth date',s.gregorian_birthday],['Hebrew birthday',s.hebrew_birthday],['Notes',s.notes]].filter(([,v])=>v).map(([label,value])=>`<p><strong>${label}:</strong> <span dir="auto" class="profileDetail">${esc(value)}</span></p>`).join('');
+  $('profileAddress').textContent=s.address?'Address: '+s.address:'Address: —';$('profileExtra').innerHTML=[['Birth date',birthdayDisplay(s.gregorian_birthday)],['Hebrew birthday',s.hebrew_birthday],['Notes',s.notes]].filter(([,v])=>v).map(([label,value])=>`<p><strong>${label}:</strong> <span dir="auto" class="profileDetail">${esc(value)}</span></p>`).join('');
   clearSearch();if(!$('studentProfile').open)$('studentProfile').showModal();$('closeProfile').focus();onProfile(s,true);
  }
  function search(){

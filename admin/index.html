@@ -1547,6 +1547,7 @@ body.sidebar-collapsed .adminSidebar{width:64px!important}body.sidebar-collapsed
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="module">
+import {birthdayDisplay,birthdayISO} from "../shared/dates.js";
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const SUPABASE_URL='https://jqylxbqwznoohscjbxrx.supabase.co';
 const SUPABASE_KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
@@ -2907,7 +2908,7 @@ function bulkRow(values={}){
     <td class="bulkClassCell${$('bulkSameClass').checked?' hidden':''}"><input class="bClass" list="bulkClassNames" value="${esc(values.className||'')}" placeholder="Class" dir="auto"></td>
     <td><input class="bPhone" type="tel" inputmode="numeric" maxlength="14" dir="ltr" value="${esc(values.phone||'')}" placeholder="(000) 000-0000"></td>
     <td><input class="bAddress" type="text" value="${esc(values.address||'')}" placeholder="Optional"></td>
-    <td><input class="bGregorian" type="date" value="${esc(values.gregorian||'')}"></td>
+    <td><input class="bGregorian" type="text" placeholder="MM/DD/YYYY" value="${esc(birthdayDisplay(values.gregorian))}"></td>
     <td><input class="bHebrew" type="text" value="${esc(values.hebrew||'')}" placeholder="Optional"></td>
     <td><button type="button" class="btn bRemove" style="padding:8px 10px">×</button></td>`;
   $('bulkRows').appendChild(tr);
@@ -2951,7 +2952,7 @@ function bulkRow(values={}){
             const m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
             if(m) v=`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
           }
-          input.value=v;
+          input.value=cells[col]==='.bGregorian'?birthdayDisplay(v):v;
           input.dispatchEvent(new Event('change',{bubbles:true}));
         });
       });
@@ -2966,7 +2967,7 @@ function bulkRow(values={}){
     if(!greg.value){return}
     heb.value='Converting…';
     try{
-      const [y,m,d]=greg.value.split('-').map(Number);
+      const normalized=birthdayISO(greg.value);greg.value=birthdayDisplay(normalized);const [y,m,d]=normalized.split('-').map(Number);
       const r=await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${y}&gm=${m}&gd=${d}&g2h=1`);
       if(!r.ok)throw new Error('Date conversion failed');
       const data=await r.json();
@@ -3267,7 +3268,7 @@ function renderBulkEditStudents(){
     <td><input class="beMother" value="${esc(formatPhone(st.mother_phone||''))}" placeholder="(000) 000-0000"></td>
     <td><input class="beOther" value="${esc(formatPhone(st.other_phone||''))}" placeholder="Optional"></td>
     <td><input class="beAddress" value="${esc(st.address||'')}" style="min-width:260px"></td>
-    <td><input class="beGreg" type="date" value="${esc(st.gregorian_birthday||'')}"></td>
+    <td><input class="beGreg" type="text" placeholder="MM/DD/YYYY" value="${esc(birthdayDisplay(st.gregorian_birthday))}"></td>
     <td><input class="beHeb" value="${esc(st.hebrew_birthday||'')}" style="min-width:190px"></td>
     <td><div class="row">${st.photo_url?`<img src="${esc(st.photo_url)}" style="width:42px;height:42px;border-radius:8px;object-fit:cover">`:''}<input class="bePhoto" type="file" accept="image/*" style="max-width:210px"></div></td>
   </tr>`).join('')||'<tr><td colspan="11" class="muted">No students found.</td></tr>';
@@ -3313,7 +3314,7 @@ $('saveBulkEditBtn').onclick=async()=>{
         mother_phone:phoneDigits(tr.querySelector('.beMother').value)||null,
         other_phone:phoneDigits(tr.querySelector('.beOther').value)||null,
         address:tr.querySelector('.beAddress').value.trim()||null,
-        gregorian_birthday:tr.querySelector('.beGreg').value||null,
+        gregorian_birthday:birthdayISO(tr.querySelector('.beGreg').value)||null,
         hebrew_birthday:tr.querySelector('.beHeb').value.trim()||null
       };
       if(!payload.name)throw new Error('Student name cannot be blank.');
@@ -3408,6 +3409,7 @@ async function saveBulkStudents(){
   })).filter(r=>r.name||r.phone||r.address||r.gregorian_birthday||r.hebrew_birthday||(!same&&r.className));
   if(!rows.length){msg($('bulkStatus'),'Enter at least one student.',true);return false}
   for(const r of rows){
+    try{r.gregorian_birthday=birthdayISO(r.gregorian_birthday)||null;}catch(e){msg($('bulkStatus'),'Row '+r.line+': '+e.message,true);return false;}
     if(!r.name||!r.className){msg($('bulkStatus'),`Row ${r.line}: enter both a student name and class.`,true);return false}
     if(r.hebrew_birthday==='Converting…'){msg($('bulkStatus'),'Please wait for birthday conversion to finish.',true);return false}
   }

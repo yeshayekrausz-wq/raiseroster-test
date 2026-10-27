@@ -1,0 +1,2 @@
+export function birthdayDisplay(value){const s=String(value||'');const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?`${m[2]}/${m[3]}/${m[1]}`:s;}
+export function birthdayISO(value){const s=String(value||'').trim();if(!s)return '';const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);const iso=m?`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`:s;if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)||!Number.isFinite(Date.parse(iso))||new Date(iso+'T12:00:00Z').toISOString().slice(0,10)!==iso)throw Error('Enter a valid birth date as MM/DD/YYYY.');return iso;}

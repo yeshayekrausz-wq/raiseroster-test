@@ -1,9 +1,9 @@
 // Editing stays local until the parent admin saves the device.
 (()=>{
 let history=[],cursor=-1,restoring=false,timer;
-const syncLabel=document.createElement('label');syncLabel.style='display:flex;align-items:center;gap:6px';const sync=document.createElement('input');sync.type='checkbox';syncLabel.append(sync,document.createTextNode('Apply style to all class cards / text boxes'));$('doneDesign').before(syncLabel);
-function syncStyles(){if(!sync.checked||!selectedBox)return;const page=settingsFor(),key=selectedBox.key,source=page[key];if(!source?.style)return;const suffix=key.startsWith('card:')?key.slice(key.lastIndexOf(':')+1):null;
-for(const el of rootForPage().querySelectorAll('[data-design-key],.customBox')){const other=el.dataset.designKey||el.dataset.customKey;if(other===key)continue;if(suffix?other.startsWith('card:')&&other.endsWith(':'+suffix):selectedBox.custom&&el.dataset.customKey){const target=page[other]||={};target.style=structuredClone(source.style);applyStyle(el,target.style);}}
+const syncLabel=document.createElement('label');syncLabel.style='display:flex;align-items:center;gap:6px';const sync=document.createElement('input');sync.type='checkbox';syncLabel.append(sync,document.createTextNode('Apply style to all class cards / text boxes'));sync.checked=true;$('doneDesign').before(syncLabel);
+function syncStyles(){if(!sync.checked||!selectedBox)return;const page=settingsFor(),key=selectedBox.key,source=page[key];if(!source)return;const suffix=key.startsWith('card:')?key.slice(key.lastIndexOf(':')+1):null;
+for(const el of rootForPage().querySelectorAll('[data-design-key],.customBox')){const other=el.dataset.designKey||el.dataset.customKey;if(other===key)continue;if(suffix?other.startsWith('card:')&&other.endsWith(':'+suffix):selectedBox.custom&&el.dataset.customKey){const target=page[other]||={};target.style=structuredClone(source.style||{});if(source.text!==undefined){target.text=source.text;el.textContent=designing?target.text:replaceFields(target.text,sourceStudent(el));}applyStyle(el,target.style);}}
 const card=selectedBox.el.closest('.student');if(card){const color=page['card:'+card.dataset.class+':background'];if(color)rootForPage().querySelectorAll('.student').forEach(c=>{page['card:'+c.dataset.class+':background']=color;c.style.background=color;});}}
 sync.onchange=()=>{if(sync.checked){syncStyles();saveDesign();}};
 const originalSave=saveDesign;
@@ -12,6 +12,7 @@ function checkpoint(){const value=JSON.stringify(designs);if(value===history[cur
 function buttons(){undo.disabled=cursor<=0;redo.disabled=cursor>=history.length-1;}
 function step(delta){clearTimeout(timer);checkpoint();const index=cursor+delta;if(index<0||index>=history.length)return;cursor=index;restoring=true;designs=JSON.parse(history[cursor]);selectedBox=null;render();sessionRender();originalSave();restoring=false;buttons();}
 function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;$('doneDesign').before(b);return b;}
+button('Apply selected box to all classes',()=>{if(!selectedBox?.key.startsWith('card:')){$('designStatus').textContent='Select a class-card text box first.';return;}const was=sync.checked;sync.checked=true;syncStyles();originalSave();checkpoint();sync.checked=was;$('designStatus').textContent='Applied to matching boxes in all visible classes. Save display settings to publish.';});
 const undo=button('↶ Undo',()=>step(-1)),redo=button('↷ Redo',()=>step(1));
 const originalDesign=designScreen;designScreen=()=>{history=[];cursor=-1;checkpoint();originalDesign();};$('designScreen').onclick=designScreen;
 saveDesign=()=>{syncStyles();originalSave();if(!restoring){clearTimeout(timer);timer=setTimeout(checkpoint,300);}};

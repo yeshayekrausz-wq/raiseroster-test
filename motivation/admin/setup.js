@@ -1,3 +1,4 @@
+import {initAccountProfile} from './account.js';
 import {initNavigation} from './navigation.js';
 import {initWorkspace} from './workspace.js';
 import {initRoster} from './roster.js';
@@ -86,7 +87,7 @@ try{
  const verified=await db.auth.getUser();if(verified.error||!verified.data?.user)throw Error('Sign-in could not be verified. Please sign in again.');authUser=verified.data.user.id;if(authUser!==data.session.user.id)throw Error('Session changed. Reload and sign in again.');
  const member=await resolveMembership(db,data.session.user.id,new URLSearchParams(location.search).get('org'));
  if(!member||!['admin','super_admin'].includes(member.role))throw Error('This workspace requires a school administrator account.');
- org=member.organization_id;await load();if(authBlocked)throw Error('Session ended. Please sign in again.');const roster=initRoster(db,org);initWorkspace(db,org,roster);initAccountTools();window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');if(!authBlocked)document.body.removeAttribute('data-auth-locked');
+ org=member.organization_id;await load();if(authBlocked)throw Error('Session ended. Please sign in again.');const roster=initRoster(db,org);initWorkspace(db,org,roster);initAccountTools();initAccountProfile(db,org,member.role).catch(e=>status(e.message,true));window.dispatchEvent(new Event('motivation-navigation'));$('newProgram').disabled=false;status('Connected to your school.');if(!authBlocked)document.body.removeAttribute('data-auth-locked');
  }
 }catch(e){lockAuth(e.message||'Access could not be verified. Reload or sign in again.');$('rosterStatus').textContent=e.message||'Unable to connect. Reload or sign in through All programs.';status(e.code==='PGRST202'||e.code==='42883'?'Hatzlacha setup is not activated in the database yet. Ask your platform administrator to run the Hatzlacha setup SQL, then reload.':e.message||'Unable to connect. Please reload.',true);}
 
@@ -105,6 +106,7 @@ function route(){
 window.addEventListener('hashchange',route);route();
 
 function initAccountTools(){
+ $('notificationBell').innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>';
  $('adminSignOut').onclick=async()=>{const {error}=await db.auth.signOut();if(error){alert(error.message);return;}lockAuth('Signed out.');location.href='../../';};
  $('notificationBell').onclick=async()=>{const panel=$('notificationList');panel.hidden=!panel.hidden;if(panel.hidden)return;panel.textContent='Loading…';const {data,error}=await db.from('admin_notifications').select('id,title,body,created_at,read_at').order('created_at',{ascending:false}).limit(50);if(error){panel.textContent='Notifications could not load. '+error.message;return;}panel.innerHTML='<strong>Notifications</strong>'+((data||[]).map(n=>'<article><b>'+esc(n.title)+'</b><p>'+esc(n.body)+'</p><small>'+esc(new Date(n.created_at).toLocaleString())+'</small></article>').join('')||'<p>No notifications.</p>');};
  document.addEventListener('click',e=>{if(!e.target.closest('.accountTools'))$('notificationList').hidden=true;});
