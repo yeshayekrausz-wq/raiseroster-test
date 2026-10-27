@@ -17,8 +17,10 @@ Deno.serve(async req=>{
   const invited=await admin.auth.admin.inviteUserByEmail(teacher.email,{redirectTo});
   if(invited.error){
    if(!['email_exists','user_already_exists'].includes(invited.error.code||''))throw invited.error;
-   // The class assignment already links this email. Preserve the existing password and session.
-   return Response.json({sent:false,linked:true},{headers});
+   // Send the existing account a login link without changing its password or roles.
+   const login=await admin.auth.signInWithOtp({email:teacher.email,options:{shouldCreateUser:false,emailRedirectTo:teacher.needs_setup?redirectTo:origin+'/raiseroster-test/motivation/teacher/'}});
+   if(login.error)throw login.error;
+   return Response.json({sent:true,linked:true},{headers});
   }
   return Response.json({sent:true},{headers});
  }catch(e){return Response.json({error:e instanceof Error?e.message:String((e as {message?:string})?.message||'Invitation failed')},{status:400,headers});}

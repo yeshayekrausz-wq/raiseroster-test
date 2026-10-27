@@ -2,7 +2,7 @@
 
 This is a source update, not a live deployment. No teacher emails have been sent by preparing this ZIP.
 
-If the first Teacher Portal update is already installed, this account-switcher update needs the GitHub files and a redeployment of **teacher-invite** only. There is no new SQL migration. Keep the existing Redirect URL and SMTP configuration.
+For the email-change update, run **Activate_Teacher_Email_Invites.sql** after the original Teacher Workspace SQL, upload the updated GitHub files, and redeploy **teacher-invite**. Keep the SMTP configuration and allow both teacher redirect URLs below.
 
 ## Install in this order
 
@@ -10,11 +10,12 @@ If the first Teacher Portal update is already installed, this account-switcher u
 2. In Supabase SQL Editor, open a **new query**. Paste the **entire contents** of `Activate_Teacher_Workspace.sql` and run it. Only this `.sql` file belongs in SQL Editor. It starts with a comment and `BEGIN;`, not `<!doctype html>`. It adds teacher tables/functions and enables RLS itself. It does not erase students, cards or points. Requires the existing Motivation/Reward Cards/Planner updates already installed.
 3. In Supabase Authentication → URL Configuration, **add** this exact Redirect URL (keep your existing URLs):
    `https://yeshayekrausz-wq.github.io/raiseroster-test/motivation/teacher/?setup=1`
+   Also allow `https://yeshayekrausz-wq.github.io/raiseroster-test/motivation/teacher/` for existing-account sign-in emails.
 4. Deploy the new Edge Function **teacher-invite**, using the complete code from `supabase/functions/teacher-invite/index.ts`. Disable the gateway's **Verify JWT with legacy secret** toggle for this function. The function still calls Auth `getUser()` and a database RPC that checks school administrator permission before sending any email. Never put the service role key in GitHub or frontend code. Supabase provides the server key to the Edge Function environment.
    CLI alternative: `supabase functions deploy teacher-invite --project-ref jqylxbqwznoohscjbxrx --no-verify-jwt`
 5. Configure a working **custom SMTP email provider** in Supabase Authentication for delivery to real teacher email addresses. Supabase's default email service can restrict recipients and delivery volume. If custom Auth email templates were previously changed, the Invite User and Reset Password templates must retain the secure `{{ .ConfirmationURL }}` link. Do not replace it with a plain website link.
 6. Refresh the admin website with Ctrl+F5. In **Teacher Portals**, save an enabled teacher with an email. A new/changed email or re-enabled assignment automatically requests a setup email. Existing teachers have a **Send setup email** button. A mail failure is shown separately; the teacher assignment remains saved. Wait two minutes before retrying the same assignment.
-7. Open the email link, set a password, and enter the portal. If that email already has an account, it is connected to the class without a second account, invitation email or password reset. The existing user opens Teacher from the nine-dot app menu. New accounts still receive a secure setup email.
+7. Open the email link, set a password, and enter the portal. If that email already has an account, it receives a secure sign-in link without a second account or password reset. New accounts receive a secure setup email.
 
 Teacher portal:
 https://yeshayekrausz-wq.github.io/raiseroster-test/motivation/teacher/
