@@ -5,3 +5,7 @@ verify_jwt = false
 # The function verifies the user with Auth and checks administrator permission in the RPC.
 [functions.teacher-invite]
 verify_jwt = false
+
+# Telnyx cannot send a Supabase JWT. Ed25519 authentication is enforced in code.
+[functions.telnyx-phone]
+verify_jwt = false
