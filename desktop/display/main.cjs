@@ -1,6 +1,6 @@
 const {app,BrowserWindow,ipcMain,Menu,Tray,nativeImage,safeStorage,net}=require('electron');
 const {autoUpdater}=require('electron-updater');const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const BASE='https://yeshayekrausz-wq.github.io/raiseroster-test/';
+const BASE='https://raiseroster.com/';
 const API='https://jqylxbqwznoohscjbxrx.supabase.co/rest/v1/rpc/';
 const KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
 let secret,pairWindow,screenWindow,tray,quitting=false,last=null,polling=false,sessionUntil=0,scanning=false,updateReady=false,receipt=null;
