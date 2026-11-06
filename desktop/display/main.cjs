@@ -1,5 +1,7 @@
 const {app,BrowserWindow,ipcMain,Menu,Tray,nativeImage,safeStorage,net}=require('electron');
 const {autoUpdater}=require('electron-updater');const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+// Unattended kiosk playback is controlled by the school administrator.
+app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 const BASE='https://raiseroster.com/';
 const API='https://jqylxbqwznoohscjbxrx.supabase.co/rest/v1/rpc/';
 const KEY='sb_publishable_Op1ar217IU0KQnKWd__aNw_g2tRNSa1';
