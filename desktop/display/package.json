@@ -27,7 +27,9 @@
       "preload.cjs",
       "pair.html",
       "package.json",
-      "assets/**"
+      "assets/**",
+      "recovery.cjs",
+      "recovery.html"
     ],
     "win": {
       "target": "nsis",
