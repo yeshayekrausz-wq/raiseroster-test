@@ -29,7 +29,10 @@
       "package.json",
       "assets/**",
       "recovery.cjs",
-      "recovery.html"
+      "recovery.html",
+      "receipt-printer.cjs",
+      "printer-preload.cjs",
+      "printer.html"
     ],
     "win": {
       "target": "nsis",
